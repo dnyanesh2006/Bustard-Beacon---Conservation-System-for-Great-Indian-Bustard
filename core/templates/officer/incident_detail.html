@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+
+{% block title %}Incident Review — {{ incident.incident_id }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h3 class="brand-font mb-0" style="color: var(--text-primary);">Incident Review: <span class="text-warning font-monospace">{{ incident.incident_id }}</span></h3>
+      <div class="small" style="color: var(--text-secondary);">Submitted by Ranger {{ incident.reporter.username }} on {{ incident.reported_at|date:"Y-m-d H:i:s" }}</div>
+    </div>
+    <a href="{% url 'officer_incidents' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Queue</a>
+  </div>
+
+  <div class="row g-4">
+    <!-- Left Column: Incident Details & Photo -->
+    <div class="col-lg-7">
+      <div class="bb-card p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="text-warning brand-font mb-0">{{ incident.get_category_display }}</h5>
+          <span class="badge badge-provenance badge-field-report">[{{ incident.data_source }}]</span>
+        </div>
+
+        <p class="p-3 rounded border border-secondary" style="color: var(--text-primary); background-color: var(--bg-secondary);">{{ incident.description }}</p>
+
+        <!-- High-res Photo Preview -->
+        {% if incident.images.exists %}
+          <div class="mt-3">
+            <h6 class="small fw-bold mb-2" style="color: var(--text-secondary);"><i class="bi bi-camera-fill me-1"></i> Field Photograph Evidence</h6>
+            <img src="{{ incident.images.first.image.url }}" class="img-fluid rounded border border-secondary zoomable-img" style="max-height:350px; width:100%; object-fit:cover;" alt="Incident Evidence Photo">
+          </div>
+        {% else %}
+          <div class="p-3 rounded border border-secondary small text-center" style="background-color: var(--bg-tertiary); color: var(--text-muted);">
+            No image was stored for this incident.
+          </div>
+        {% endif %}
+
+        <!-- Location & Environmental Context -->
+        {% if incident.location %}
+          <div class="row g-3 mt-3">
+            <div class="col-md-6">
+              <div class="p-3 rounded border border-secondary" style="background-color: var(--bg-tertiary);">
+                <h6 class="text-warning brand-font small mb-1"><i class="bi bi-geo-alt"></i> Device GPS Coordinates</h6>
+                <div class="font-monospace small" style="color: var(--text-primary);">Lat: {{ incident.location.latitude|floatformat:5 }}</div>
+                <div class="font-monospace small" style="color: var(--text-primary);">Lng: {{ incident.location.longitude|floatformat:5 }}</div>
+                <div class="small" style="color: var(--text-muted);">Zone: <b style="color: var(--text-primary);">{{ incident.location.zone.name|default:"Nannaj Sector" }}</b></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="p-3 rounded border border-secondary" style="background-color: var(--bg-tertiary);">
+                <h6 class="text-warning brand-font small mb-1"><i class="bi bi-cloud-sun"></i> Environmental Context</h6>
+                <div class="small" style="color: var(--text-primary);">Temp: <b>{{ incident.location.weather_temperature_c|default:"31.5" }}°C</b></div>
+                <div class="small" style="color: var(--text-primary);">Condition: <b>{{ incident.location.weather_condition|default:"Clear Sky" }}</b></div>
+                <div class="small" style="color: var(--text-muted);">Wind: {{ incident.location.weather_wind_speed_kmh|default:"12" }} km/h</div>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Right Column: Verification & Ranger Assignment -->
+    <div class="col-lg-5">
+      <!-- Officer Verification Panel -->
+      <div class="bb-card p-4 mb-4">
+        <h5 class="text-warning brand-font mb-3"><i class="bi bi-shield-check me-2"></i> Verification & Priority Control</h5>
+        
+        <form method="POST" action="{% url 'officer_incident_detail' incident.id %}">
+          {% csrf_token %}
+          <input type="hidden" name="action_type" value="verify_incident">
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Verification Status</label>
+            <select name="status" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+              <option value="PENDING" {% if incident.status == 'PENDING' %}selected{% endif %}>Pending Verification</option>
+              <option value="VERIFIED" {% if incident.status == 'VERIFIED' %}selected{% endif %}>Approve / Verified Operational</option>
+              <option value="REJECTED" {% if incident.status == 'REJECTED' %}selected{% endif %}>Reject Invalid Report</option>
+              <option value="MORE_INFO" {% if incident.status == 'MORE_INFO' %}selected{% endif %}>Request More Information</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Incident Priority Classification</label>
+            <select name="priority" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+              <option value="CRITICAL" {% if incident.priority == 'CRITICAL' %}selected{% endif %}>CRITICAL (Emergency / Medical Rescue)</option>
+              <option value="HIGH" {% if incident.priority == 'HIGH' %}selected{% endif %}>HIGH (Rapid Response)</option>
+              <option value="MEDIUM" {% if incident.priority == 'MEDIUM' %}selected{% endif %}>MEDIUM (Standard)</option>
+              <option value="LOW" {% if incident.priority == 'LOW' %}selected{% endif %}>LOW (Routine Information)</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Select Available Field Ranger (Optional)</label>
+            <select name="ranger_id" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+              <option value="">-- No Ranger Assignment / Same as Request --</option>
+              {% for ranger in available_rangers %}
+                <option value="{{ ranger.id }}">{{ ranger.get_full_name|default:ranger.username }} (Badge: {{ ranger.profile.badge_number|default:"N/A" }})</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Officer Verification Notes & Instructions</label>
+            <textarea name="verification_notes" rows="2" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Add verification remarks or patrol instructions...">{{ incident.verification_notes }}</textarea>
+          </div>
+
+          <button type="submit" class="btn btn-bb-sand w-100 fw-bold">Update Verification & Assign</button>
+        </form>
+        
+        {% if existing_assignments %}
+          <div class="mt-3 pt-3 border-top border-secondary">
+            <h6 class="small fw-bold mb-2" style="color: var(--text-secondary);">Existing Assignments for this Incident</h6>
+            {% for a in existing_assignments %}
+              <div class="p-2 rounded mb-2 small" style="background-color: var(--bg-tertiary); color: var(--text-primary);">
+                <b>Ranger:</b> {{ a.assigned_ranger.username }} | Status: <span class="badge bg-info text-dark">{{ a.get_status_display }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Medical Team Assignment Panel -->
+      {% if incident.category == 'INJURED_BIRD' or incident.category == 'SICK_BIRD' or incident.priority == 'CRITICAL' %}
+      <div class="bb-card p-4 mb-4 border border-danger">
+        <h5 class="text-danger brand-font mb-3"><i class="bi bi-heart-pulse-fill me-2"></i> Medical Team Assignment</h5>
+        
+        {% if medical_case %}
+          <div class="alert alert-danger py-2 small mb-3">
+            <strong>Active Medical Case:</strong> <a href="{% url 'medical_case_detail' medical_case.id %}" class="text-danger text-decoration-underline">{{ medical_case.case_id }}</a><br>
+            Current Assignment: {% if medical_case.assigned_team %}<strong>{{ medical_case.assigned_team.username }}</strong>{% else %}Unassigned{% endif %}
+          </div>
+        {% endif %}
+
+        <form method="POST" action="{% url 'officer_incident_detail' incident.id %}">
+          {% csrf_token %}
+          <input type="hidden" name="action_type" value="assign_medical">
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-danger">Set Priority</label>
+            <select name="priority" class="form-select border-danger" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+              <option value="HIGH" {% if medical_case.priority == 'HIGH' %}selected{% endif %}>High</option>
+              <option value="MEDIUM" {% if medical_case.priority == 'MEDIUM' or not medical_case %}selected{% endif %}>Medium</option>
+              <option value="LOW" {% if medical_case.priority == 'LOW' %}selected{% endif %}>Low</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-danger">Select Available Medical Team</label>
+            <select name="medical_team_id" class="form-select border-danger" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+              <option value="">-- Choose Medical Team --</option>
+              {% for team in medical_teams %}
+                {% if team.availability_status == 'AVAILABLE' %}
+                  <option value="{{ team.user.id }}">{{ team.user.get_full_name|default:team.user.username }} (Available)</option>
+                {% elif team.availability_status == 'BUSY' %}
+                  <option value="" disabled>{{ team.user.get_full_name|default:team.user.username }} (Busy)</option>
+                {% else %}
+                  <option value="" disabled>{{ team.user.get_full_name|default:team.user.username }} (Offline)</option>
+                {% endif %}
+              {% empty %}
+                <option value="" disabled>No Medical Teams configured.</option>
+              {% endfor %}
+            </select>
+            {% if medical_teams %}
+                {% if medical_teams|length > 0 %}
+                <div class="form-text text-danger mt-1">If no teams are available, case will remain unassigned.</div>
+                {% endif %}
+            {% else %}
+                <div class="form-text text-danger mt-1"><strong>Warning:</strong> No suitable medical teams are available. The case will remain pending.</div>
+            {% endif %}
+          </div>
+
+          <button type="submit" class="btn btn-danger w-100 fw-bold mb-4">
+            {% if medical_case %}Reassign Medical Team{% else %}Create Case & Assign Medical Team{% endif %}
+          </button>
+        </form>
+
+        <h6 class="text-danger brand-font mb-2"><i class="bi bi-box-seam me-2"></i> Operational Medical Resources</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-bb mb-0 align-middle style-small" style="font-size: 0.85rem;">
+            <thead>
+              <tr>
+                <th>Equipment</th>
+                <th>Available</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for eq in medical_equipment %}
+                <tr>
+                  <td style="color: var(--text-primary);">{{ eq.name }}</td>
+                  <td>
+                    {% if eq.quantity_available > 0 and eq.status == 'OPERATIONAL' %}
+                      <span class="badge bg-success">{{ eq.quantity_available }} Available</span>
+                    {% elif eq.status == 'MAINTENANCE' %}
+                      <span class="badge bg-warning text-dark">Maintenance</span>
+                    {% else %}
+                      <span class="badge bg-danger">Unavailable</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="2" class="text-muted text-center">No medical resources found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+
+  </div>
+</div>
+{% endblock %}

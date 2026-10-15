@@ -1,0 +1,719 @@
+{% extends 'base.html' %}
+
+{% block title %}Tourism Handling & Visitor Permits — BUSTARD BEACON{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+  <!-- Top Header & Breadcrumb Bar -->
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+      <h3 class="brand-font mb-1" style="color: var(--text-primary);">
+        <i class="bi bi-compass text-info me-2"></i> Sanctuary Tourism Handling & Visitor Permits
+      </h3>
+      <div class="text-secondary small">
+        Maldhok Sanctuary / Solapur Headquarters &bull; Eco-Tourism Records, Permitted Groups & Zone Access
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% if user_role == ROLE_ADMIN %}{% url 'admin_dashboard' %}{% else %}{% url 'officer_dashboard' %}{% endif %}" class="btn btn-outline-secondary btn-sm fw-bold">
+        <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+      </a>
+      <button type="button" class="btn btn-bb-sand btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#issuePermitModal">
+        <i class="bi bi-plus-circle me-1"></i> Issue Visitor Permit
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Summary Cards Row -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3 col-sm-6">
+      <div class="bb-card p-3 h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h3 class="text-info fw-bold mb-0">{{ active_permits }}</h3>
+            <div class="small fw-semibold" style="color: var(--text-secondary);">ACTIVE PERMITS</div>
+          </div>
+          <i class="bi bi-patch-check-fill fs-2 text-info opacity-50"></i>
+        </div>
+        <div class="small mt-2" style="color: var(--text-secondary); font-size: 0.78rem;">Currently valid visitor passes</div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="bb-card p-3 h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h3 class="text-warning fw-bold mb-0">{{ total_visitors }}</h3>
+            <div class="small fw-semibold" style="color: var(--text-secondary);">TOTAL VISITORS</div>
+          </div>
+          <i class="bi bi-people-fill fs-2 text-warning opacity-50"></i>
+        </div>
+        <div class="small mt-2" style="color: var(--text-secondary); font-size: 0.78rem;">Permitted persons in party</div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="bb-card p-3 h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h3 class="text-success fw-bold mb-0">{{ total_permits }}</h3>
+            <div class="small fw-semibold" style="color: var(--text-secondary);">HISTORICAL PERMITS</div>
+          </div>
+          <i class="bi bi-journal-check fs-2 text-success opacity-50"></i>
+        </div>
+        <div class="small mt-2" style="color: var(--text-secondary); font-size: 0.78rem;">Total recorded entries</div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="bb-card p-3 h-100">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h3 class="fw-bold mb-0" style="color: var(--text-primary);">{{ restrictions_count }}</h3>
+            <div class="small fw-semibold" style="color: var(--text-secondary);">ZONE RESTRICTIONS</div>
+          </div>
+          <i class="bi bi-shield-lock-fill fs-2 text-secondary opacity-50"></i>
+        </div>
+        <div class="small mt-2" style="color: var(--text-secondary); font-size: 0.78rem;">Sanctuary access rules defined</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <ul class="nav nav-tabs border-secondary mb-4" id="tourismTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active fw-bold px-4" id="records-tab" data-bs-toggle="tab" data-bs-target="#records-panel" type="button" role="tab">
+        <i class="bi bi-person-badge me-2"></i> Visitor Permits & Tour Records ({{ records|length }})
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link fw-bold px-4" id="access-tab" data-bs-toggle="tab" data-bs-target="#access-panel" type="button" role="tab">
+        <i class="bi bi-shield-shaded me-2"></i> Zone Access Controls ({{ restrictions|length }})
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="tourismTabsContent">
+    <!-- TAB 1: VISITOR PERMITS & TOUR RECORDS -->
+    <div class="tab-pane fade show active" id="records-panel" role="tabpanel">
+      <!-- Search and Filter Bar -->
+      <div class="bb-card p-3 mb-4">
+        <form method="GET" action="{% url 'officer_tourism' %}" class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Search Permits</label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text border-secondary" style="background-color: var(--bg-secondary); color: var(--text-secondary);"><i class="bi bi-search"></i></span>
+              <input type="text" name="q" value="{{ q }}" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Name, Permit ID, Area, Notes...">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Permit Status</label>
+            <select name="status" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+              <option value="ALL">All Statuses</option>
+              {% for val, label in status_choices %}
+                <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Designated Zone</label>
+            <select name="zone_id" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+              <option value="ALL">All Zones</option>
+              {% for z in zones %}
+                <option value="{{ z.id }}" {% if zone_filter == z.id|stringformat:"s" %}selected{% endif %}>{{ z.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">From Date</label>
+            <input type="date" name="from_date" value="{{ from_date }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">To Date</label>
+            <input type="date" name="to_date" value="{{ to_date }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          </div>
+          <div class="col-md-1 d-flex gap-1">
+            <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold" title="Filter"><i class="bi bi-funnel"></i></button>
+            {% if q or status_filter != 'ALL' or zone_filter != 'ALL' or from_date or to_date %}
+              <a href="{% url 'officer_tourism' %}" class="btn btn-outline-secondary btn-sm" title="Clear Filters"><i class="bi bi-x-circle"></i></a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+
+      <!-- Tourism Records Table -->
+      <div class="bb-card p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="brand-font mb-0" style="color: var(--text-primary);">
+            <i class="bi bi-card-checklist text-info me-2"></i> Registered Visitors & Tour Groups
+          </h5>
+          <span class="badge" style="background-color: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--surface-border);">
+            {{ records|length }} record{{ records|length|pluralize }} found
+          </span>
+        </div>
+
+        {% if records %}
+          <div class="table-responsive">
+            <table class="table table-bb table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Permit ID</th>
+                  <th>Visitor / Group Name</th>
+                  <th>Visit Date</th>
+                  <th>Guests</th>
+                  <th>Sanctuary Zone & Area</th>
+                  <th>Purpose</th>
+                  <th>Status</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in records %}
+                  <tr>
+                    <td class="font-monospace fw-bold text-info">{{ r.permit_id }}</td>
+                    <td>
+                      <div class="fw-bold" style="color: var(--text-primary);">{{ r.visitor_name }}</div>
+                      {% if r.contact_phone %}
+                        <div class="small" style="color: var(--text-secondary); font-size: 0.75rem;"><i class="bi bi-telephone me-1"></i>{{ r.contact_phone }}</div>
+                      {% endif %}
+                    </td>
+                    <td class="font-monospace small" style="color: var(--text-primary);">{{ r.visit_date|date:"Y-m-d" }}</td>
+                    <td>
+                      <span class="badge bg-secondary font-monospace">{{ r.visitor_count }} {% if r.visitor_count == 1 %}person{% else %}persons{% endif %}</span>
+                    </td>
+                    <td>
+                      {% if r.zone %}
+                        <span class="badge" style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--surface-border);">
+                          {{ r.zone.name }}
+                        </span>
+                      {% else %}
+                        <span class="small text-muted">Unassigned Zone</span>
+                      {% endif %}
+                      {% if r.location_area %}
+                        <div class="small mt-1" style="color: var(--text-secondary); font-size: 0.75rem;"><i class="bi bi-geo-alt me-1"></i>{{ r.location_area }}</div>
+                      {% endif %}
+                    </td>
+                    <td class="small" style="color: var(--text-primary);">{{ r.purpose_of_visit|truncatechars:45 }}</td>
+                    <td>
+                      {% if r.status == 'APPROVED' %}
+                        <span class="badge bg-success">APPROVED</span>
+                      {% elif r.status == 'PENDING' %}
+                        <span class="badge bg-warning text-dark">PENDING</span>
+                      {% elif r.status == 'COMPLETED' %}
+                        <span class="badge bg-info text-dark">COMPLETED</span>
+                      {% else %}
+                        <span class="badge bg-danger">CANCELLED</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-end text-nowrap">
+                      <!-- Details Button -->
+                      <button type="button" class="btn btn-outline-info btn-sm py-1 px-2 btn-view-details"
+                              data-bs-toggle="modal" data-bs-target="#viewDetailsModal"
+                              data-id="{{ r.id }}"
+                              data-permit="{{ r.permit_id }}"
+                              data-name="{{ r.visitor_name }}"
+                              data-phone="{{ r.contact_phone }}"
+                              data-email="{{ r.contact_email }}"
+                              data-date="{{ r.visit_date|date:'Y-m-d' }}"
+                              data-count="{{ r.visitor_count }}"
+                              data-zone="{{ r.zone.name|default:'N/A' }}"
+                              data-area="{{ r.location_area|default:'N/A' }}"
+                              data-purpose="{{ r.purpose_of_visit }}"
+                              data-status="{{ r.get_status_display }}"
+                              data-remarks="{{ r.remarks|default:'None' }}"
+                              data-recorded-by="{{ r.recorded_by.username|default:'System' }}"
+                              data-created="{{ r.created_at|date:'Y-m-d H:i' }}"
+                              title="View Permit Details">
+                        <i class="bi bi-eye"></i>
+                      </button>
+
+                      <!-- Edit Button -->
+                      <button type="button" class="btn btn-outline-warning btn-sm py-1 px-2 btn-edit-record"
+                              data-bs-toggle="modal" data-bs-target="#editPermitModal"
+                              data-id="{{ r.id }}"
+                              data-permit="{{ r.permit_id }}"
+                              data-name="{{ r.visitor_name }}"
+                              data-phone="{{ r.contact_phone }}"
+                              data-email="{{ r.contact_email }}"
+                              data-date="{{ r.visit_date|date:'Y-m-d' }}"
+                              data-count="{{ r.visitor_count }}"
+                              data-zone-id="{{ r.zone_id|default:'' }}"
+                              data-area="{{ r.location_area }}"
+                              data-purpose="{{ r.purpose_of_visit }}"
+                              data-status="{{ r.status }}"
+                              data-remarks="{{ r.remarks }}"
+                              title="Edit Permit">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+
+                      <!-- Delete Button -->
+                      <button type="button" class="btn btn-outline-danger btn-sm py-1 px-2 btn-delete-record"
+                              data-bs-toggle="modal" data-bs-target="#deletePermitModal"
+                              data-id="{{ r.id }}"
+                              data-permit="{{ r.permit_id }}"
+                              data-name="{{ r.visitor_name }}"
+                              title="Delete Permit">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="bb-empty-state py-5 text-center">
+            <i class="bi bi-compass fs-1 text-secondary opacity-50 mb-3 d-block"></i>
+            <h5 style="color: var(--text-primary);">No tourism records found</h5>
+            <p class="small text-secondary mb-3">
+              {% if q or status_filter != 'ALL' or zone_filter != 'ALL' or from_date or to_date %}
+                No visitor permits match your current search criteria.
+              {% else %}
+                No eco-tourism permits or visitor entries have been registered yet.
+              {% endif %}
+            </p>
+            <button type="button" class="btn btn-bb-sand btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#issuePermitModal">
+              <i class="bi bi-plus-circle me-1"></i> Issue First Tourism Permit
+            </button>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- TAB 2: ZONE ACCESS CONTROLS (Preserving original functionality) -->
+    <div class="tab-pane fade" id="access-panel" role="tabpanel">
+      <div class="row g-4">
+        <!-- Restrictions List -->
+        <div class="col-lg-8">
+          <div class="bb-card p-4">
+            <h5 class="brand-font mb-3" style="color: var(--text-primary);">
+              <i class="bi bi-shield-lock text-warning me-2"></i> Sanctuary Eco-Tourism Zone Access Rules
+            </h5>
+            <p class="small mb-3" style="color: var(--text-secondary);">
+              Configured access policies per conservation zone. Breeding areas require strictly prohibited or restricted access.
+            </p>
+
+            {% if restrictions %}
+              <div class="table-responsive">
+                <table class="table table-bb table-hover align-middle">
+                  <thead>
+                    <tr>
+                      <th>Zone Name</th>
+                      <th>Access Status</th>
+                      <th>Restriction Reason</th>
+                      <th>Valid From</th>
+                      <th>Updated By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for r in restrictions %}
+                      <tr>
+                        <td><b style="color: var(--text-primary);">{{ r.zone.name }}</b> <span class="small text-secondary">({{ r.zone.code }})</span></td>
+                        <td>
+                          {% if r.status == 'ALLOWED' %}
+                            <span class="badge bg-success">TOURISM ALLOWED</span>
+                          {% elif r.status == 'RESTRICTED' %}
+                            <span class="badge bg-warning text-dark">PERMIT REQUIRED</span>
+                          {% else %}
+                            <span class="badge bg-danger">STRICTLY PROHIBITED</span>
+                          {% endif %}
+                        </td>
+                        <td class="small" style="color: var(--text-primary);">{{ r.restriction_reason }}</td>
+                        <td class="small font-monospace" style="color: var(--text-secondary);">{{ r.valid_from }}</td>
+                        <td class="small" style="color: var(--text-primary);">{{ r.updated_by.username|default:"System" }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="bb-empty-state">
+                <i class="bi bi-shield-x"></i>
+                <h6>No tourism restrictions recorded yet.</h6>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Update Restriction Form -->
+        <div class="col-lg-4">
+          <div class="bb-card p-4">
+            <h5 class="text-warning brand-font mb-3">
+              <i class="bi bi-sliders me-1"></i> Set Zone Tourism Policy
+            </h5>
+
+            <form method="POST" action="{% url 'officer_tourism' %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="update_restriction">
+
+              <div class="mb-3">
+                <label class="form-label small fw-bold" style="color: var(--text-secondary);">Select Sanctuary Zone</label>
+                <select name="zone_id" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+                  {% for z in zones %}
+                    <option value="{{ z.id }}">{{ z.name }} ({{ z.code }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small fw-bold" style="color: var(--text-secondary);">Access Policy</label>
+                <select name="status" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                  <option value="ALLOWED">Tourism Allowed (General Visiting)</option>
+                  <option value="RESTRICTED">Restricted Entry (Permit Required)</option>
+                  <option value="PROHIBITED">Strictly Prohibited (Breeding Sanctuary)</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small fw-bold" style="color: var(--text-secondary);">Restriction Reason / Rationale</label>
+                <textarea name="restriction_reason" rows="3" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Conservation rationale or guidelines..." required></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-warning w-100 fw-bold">Save Access Policy</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 1: Issue New Visitor Permit -->
+<div class="modal fade" id="issuePermitModal" tabindex="-1" aria-labelledby="issuePermitModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+      <form method="POST" action="{% url 'officer_tourism' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_permit">
+
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title brand-font" id="issuePermitModalLabel" style="color: var(--text-primary);">
+            <i class="bi bi-patch-plus text-info me-2"></i> Issue New Visitor / Tour Permit
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: var(--btn-close-filter);"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Lead Visitor / Group Name <span class="text-danger">*</span></label>
+              <input type="text" name="visitor_name" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="e.g. Pune Birders Club / John Doe" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Visit Date <span class="text-danger">*</span></label>
+              <input type="date" name="visit_date" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" value="{{ now|date:'Y-m-d' }}" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Number of Visitors <span class="text-danger">*</span></label>
+              <input type="number" name="visitor_count" min="1" max="100" value="1" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Contact Phone</label>
+              <input type="text" name="contact_phone" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="+91 98765 43210">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Contact Email</label>
+              <input type="email" name="contact_email" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="lead.visitor@example.com">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Designated Conservation Zone</label>
+              <select name="zone_id" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                <option value="">-- Select Permitted Zone --</option>
+                {% for z in zones %}
+                  <option value="{{ z.id }}">{{ z.name }} ({{ z.code }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Trail, Watchtower, or Specific Area</label>
+              <input type="text" name="location_area" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="e.g. Nannaj Grassland Watchtower #2">
+            </div>
+
+            <div class="col-md-8">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Purpose of Visit <span class="text-danger">*</span></label>
+              <input type="text" name="purpose_of_visit" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="e.g. Wildlife Photography, Birdwatching, Student Field Study" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Initial Permit Status</label>
+              <select name="status" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                <option value="APPROVED" selected>Approved / Active</option>
+                <option value="PENDING">Pending Verification</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Remarks / Special Permissions / Guide Assigned</label>
+              <textarea name="remarks" rows="2" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Vehicle registration numbers, forest guide assigned, strictly no off-road trail rules, etc."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-bb-sand fw-bold"><i class="bi bi-check-circle me-1"></i> Issue Visitor Permit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 2: View Permit Details -->
+<div class="modal fade" id="viewDetailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title brand-font" style="color: var(--text-primary);">
+          <i class="bi bi-file-earmark-person text-info me-2"></i> Visitor Permit Details: <span id="view-permit-id" class="font-monospace text-warning"></span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: var(--btn-close-filter);"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="small fw-bold" style="color: var(--text-secondary);">VISITOR / GROUP NAME</div>
+            <div id="view-visitor-name" class="fs-5 fw-bold" style="color: var(--text-primary);"></div>
+          </div>
+          <div class="col-md-3">
+            <div class="small fw-bold" style="color: var(--text-secondary);">VISIT DATE</div>
+            <div id="view-visit-date" class="font-monospace fw-bold" style="color: var(--text-primary);"></div>
+          </div>
+          <div class="col-md-3">
+            <div class="small fw-bold" style="color: var(--text-secondary);">PARTY SIZE</div>
+            <div id="view-visitor-count" class="badge bg-secondary fs-6"></div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="small fw-bold" style="color: var(--text-secondary);">PHONE NUMBER</div>
+            <div id="view-contact-phone" style="color: var(--text-primary);"></div>
+          </div>
+          <div class="col-md-6">
+            <div class="small fw-bold" style="color: var(--text-secondary);">EMAIL ADDRESS</div>
+            <div id="view-contact-email" style="color: var(--text-primary);"></div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="small fw-bold" style="color: var(--text-secondary);">DESIGNATED SANCTUARY ZONE</div>
+            <div id="view-zone-name" class="fw-bold" style="color: var(--text-primary);"></div>
+          </div>
+          <div class="col-md-6">
+            <div class="small fw-bold" style="color: var(--text-secondary);">SPECIFIC LOCATION / TRAIL</div>
+            <div id="view-location-area" style="color: var(--text-primary);"></div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="small fw-bold" style="color: var(--text-secondary);">PURPOSE OF VISIT</div>
+            <div id="view-purpose" style="color: var(--text-primary);"></div>
+          </div>
+          <div class="col-md-6">
+            <div class="small fw-bold" style="color: var(--text-secondary);">PERMIT STATUS</div>
+            <div id="view-status-display"></div>
+          </div>
+
+          <div class="col-12">
+            <div class="small fw-bold" style="color: var(--text-secondary);">REMARKS & CONDITIONS</div>
+            <div id="view-remarks" class="p-2 rounded border border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);"></div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="small fw-bold" style="color: var(--text-secondary);">ISSUED BY</div>
+            <div id="view-recorded-by" class="small" style="color: var(--text-primary);"></div>
+          </div>
+          <div class="col-md-6">
+            <div class="small fw-bold" style="color: var(--text-secondary);">ISSUED TIMESTAMP</div>
+            <div id="view-created-at" class="small font-monospace" style="color: var(--text-secondary);"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 3: Edit Tourism Permit -->
+<div class="modal fade" id="editPermitModal" tabindex="-1" aria-labelledby="editPermitModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+      <form id="editPermitForm" method="POST" action="">
+        {% csrf_token %}
+
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title brand-font" id="editPermitModalLabel" style="color: var(--text-primary);">
+            <i class="bi bi-pencil-square text-warning me-2"></i> Edit Visitor Permit: <span id="edit-permit-badge" class="font-monospace text-info"></span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: var(--btn-close-filter);"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Lead Visitor / Group Name <span class="text-danger">*</span></label>
+              <input type="text" id="edit-name" name="visitor_name" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Visit Date <span class="text-danger">*</span></label>
+              <input type="date" id="edit-date" name="visit_date" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Visitor Count <span class="text-danger">*</span></label>
+              <input type="number" id="edit-count" name="visitor_count" min="1" max="100" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Contact Phone</label>
+              <input type="text" id="edit-phone" name="contact_phone" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Contact Email</label>
+              <input type="email" id="edit-email" name="contact_email" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Designated Conservation Zone</label>
+              <select id="edit-zone" name="zone_id" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                <option value="">-- Unassigned Zone --</option>
+                {% for z in zones %}
+                  <option value="{{ z.id }}">{{ z.name }} ({{ z.code }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Location / Specific Area</label>
+              <input type="text" id="edit-area" name="location_area" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+            </div>
+
+            <div class="col-md-8">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Purpose of Visit <span class="text-danger">*</span></label>
+              <input type="text" id="edit-purpose" name="purpose_of_visit" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Status</label>
+              <select id="edit-status" name="status" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                <option value="APPROVED">Approved / Active</option>
+                <option value="PENDING">Pending Verification</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Remarks & Notes</label>
+              <textarea id="edit-remarks" name="remarks" rows="2" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning fw-bold"><i class="bi bi-save me-1"></i> Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 4: Delete Tourism Permit Confirmation -->
+<div class="modal fade" id="deletePermitModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+      <form id="deletePermitForm" method="POST" action="">
+        {% csrf_token %}
+
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title brand-font text-danger">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> Confirm Record Deletion
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: var(--btn-close-filter);"></button>
+        </div>
+
+        <div class="modal-body">
+          <p style="color: var(--text-primary);">Are you sure you want to permanently delete this visitor permit?</p>
+          <div class="p-3 rounded border border-danger-subtle mb-3" style="background-color: var(--bg-secondary);">
+            <div class="fw-bold font-monospace text-warning" id="delete-permit-id"></div>
+            <div class="fw-semibold" style="color: var(--text-primary);" id="delete-visitor-name"></div>
+          </div>
+          <p class="small text-danger mb-0">This action will be logged in the system audit trail and cannot be undone.</p>
+        </div>
+
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger fw-bold"><i class="bi bi-trash me-1"></i> Delete Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Check if ?action=new was requested in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('action') === 'new') {
+      const modalEl = document.getElementById('issuePermitModal');
+      if (modalEl) {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+      }
+    }
+
+    // View Details Modal Population
+    document.querySelectorAll('.btn-view-details').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.getElementById('view-permit-id').innerText = this.getAttribute('data-permit') || '';
+        document.getElementById('view-visitor-name').innerText = this.getAttribute('data-name') || '';
+        document.getElementById('view-visit-date').innerText = this.getAttribute('data-date') || '';
+        document.getElementById('view-visitor-count').innerText = (this.getAttribute('data-count') || '1') + ' person(s)';
+        document.getElementById('view-contact-phone').innerText = this.getAttribute('data-phone') || 'None recorded';
+        document.getElementById('view-contact-email').innerText = this.getAttribute('data-email') || 'None recorded';
+        document.getElementById('view-zone-name').innerText = this.getAttribute('data-zone') || 'Unassigned';
+        document.getElementById('view-location-area').innerText = this.getAttribute('data-area') || 'General sanctuary';
+        document.getElementById('view-purpose').innerText = this.getAttribute('data-purpose') || '';
+        document.getElementById('view-remarks').innerText = this.getAttribute('data-remarks') || 'None';
+        document.getElementById('view-recorded-by').innerText = 'Officer: ' + (this.getAttribute('data-recorded-by') || 'System');
+        document.getElementById('view-created-at').innerText = this.getAttribute('data-created') || '';
+
+        const status = this.getAttribute('data-status') || '';
+        const statusEl = document.getElementById('view-status-display');
+        statusEl.innerHTML = `<span class="badge bg-info text-dark">${status}</span>`;
+      });
+    });
+
+    // Edit Modal Population
+    document.querySelectorAll('.btn-edit-record').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const id = this.getAttribute('data-id');
+        const form = document.getElementById('editPermitForm');
+        form.action = `/officer/tourism/${id}/edit/`;
+
+        document.getElementById('edit-permit-badge').innerText = this.getAttribute('data-permit') || '';
+        document.getElementById('edit-name').value = this.getAttribute('data-name') || '';
+        document.getElementById('edit-date').value = this.getAttribute('data-date') || '';
+        document.getElementById('edit-count').value = this.getAttribute('data-count') || '1';
+        document.getElementById('edit-phone').value = this.getAttribute('data-phone') || '';
+        document.getElementById('edit-email').value = this.getAttribute('data-email') || '';
+        document.getElementById('edit-zone').value = this.getAttribute('data-zone-id') || '';
+        document.getElementById('edit-area').value = this.getAttribute('data-area') || '';
+        document.getElementById('edit-purpose').value = this.getAttribute('data-purpose') || '';
+        document.getElementById('edit-status').value = this.getAttribute('data-status') || 'APPROVED';
+        document.getElementById('edit-remarks').value = this.getAttribute('data-remarks') || '';
+      });
+    });
+
+    // Delete Modal Population
+    document.querySelectorAll('.btn-delete-record').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const id = this.getAttribute('data-id');
+        const form = document.getElementById('deletePermitForm');
+        form.action = `/officer/tourism/${id}/delete/`;
+
+        document.getElementById('delete-permit-id').innerText = this.getAttribute('data-permit') || '';
+        document.getElementById('delete-visitor-name').innerText = this.getAttribute('data-name') || '';
+      });
+    });
+  });
+</script>
+{% endblock %}

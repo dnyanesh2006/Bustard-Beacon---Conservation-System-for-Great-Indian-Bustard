@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Sanctuary Conservation Zones — Forest Officer{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="row g-4">
+    <!-- Zones List -->
+    <div class="col-lg-8">
+      <div class="bb-card p-4">
+        <h4 class="brand-font mb-3" style="color: var(--text-primary);"><i class="bi bi-bounding-box-circles text-warning me-2"></i> Nannaj Sanctuary Conservation Zones</h4>
+        
+        <div class="alert alert-info py-2 small">
+          <i class="bi bi-info-circle me-1"></i> Zone boundaries are displayed on the Live GIS Map as <b>Reference / Approximate Conservation Boundaries</b>.
+        </div>
+
+        {% if zones %}
+          <div class="table-responsive">
+            <table class="table table-bb table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Zone Name</th>
+                  <th>Type</th>
+                  <th>Color Tag</th>
+                  <th>Officer</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for z in zones %}
+                  <tr>
+                    <td class="font-monospace text-warning fw-bold">{{ z.code }}</td>
+                    <td><b style="color: var(--text-primary);">{{ z.name }}</b></td>
+                    <td style="color: var(--text-primary);">{{ z.get_zone_type_display }}</td>
+                    <td>
+                      <span class="d-inline-block rounded-circle" style="width:14px; height:14px; background-color:{{ z.color_hex }};"></span>
+                    </td>
+                    <td class="small" style="color: var(--text-primary);">{{ z.responsible_officer.username|default:"Unassigned" }}</td>
+                    <td>
+                      {% if z.is_active %}<span class="badge bg-success">ACTIVE</span>{% else %}<span class="badge bg-secondary">INACTIVE</span>{% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="bb-empty-state">
+            <i class="bi bi-map"></i>
+            <h6>No conservation zones configured yet.</h6>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Create Zone Form -->
+    <div class="col-lg-4">
+      <div class="bb-card p-4">
+        <h5 class="text-warning brand-font mb-3"><i class="bi bi-plus-circle me-1"></i> Add Reference Zone</h5>
+        
+        <form method="POST" action="{% url 'officer_zones' %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Zone Name</label>
+            <input type="text" name="name" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="e.g. North Nannaj Buffer" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Zone Code</label>
+            <input type="text" name="code" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="e.g. ZONE-NNJ-N1" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Zone Type</label>
+            <select name="zone_type" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+              <option value="BREEDING">Core Breeding Sanctuary</option>
+              <option value="CORE_CONSERVATION" selected>Core Conservation Zone</option>
+              <option value="BUFFER_RESTRICTED">Buffer / Restricted Zone</option>
+              <option value="TOURISM_NORMAL">Tourism & Visitor Area</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Map Fill Color (Hex)</label>
+            <input type="color" name="color_hex" value="#2e7d32" class="form-control form-control-color border-secondary w-100" style="background-color: var(--bg-secondary);">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Description</label>
+            <textarea name="description" rows="2" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Zone purpose details..."></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-bb-sand w-100 fw-bold">Save Conservation Zone</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

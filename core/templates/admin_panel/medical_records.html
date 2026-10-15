@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+
+{% block title %}Medical Case Records — Admin Control Center{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+  <!-- Header & Back Navigation -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary btn-sm fw-bold">
+          <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+        </a>
+        <span class="badge bg-success font-monospace fw-bold">{{ total_count }} Total Cases in System</span>
+        {% if filtered_count != total_count %}
+          <span class="badge bg-secondary font-monospace">{{ filtered_count }} Matching Filters</span>
+        {% endif %}
+      </div>
+      <h3 class="brand-font mb-0" style="color: var(--text-primary);">
+        <i class="bi bi-heart-pulse-fill text-success me-2"></i> Veterinary & Medical Case Registry
+      </h3>
+      <div class="small" style="color: var(--text-secondary);">
+        Complete read-only log of wildlife emergency rescues, veterinary examinations, and rehabilitation tracks.
+      </div>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <a href="{% url 'download_pdf_report' %}?type=MEDICAL_RESCUE_REPORT" class="btn btn-outline-warning btn-sm fw-bold">
+        <i class="bi bi-file-earmark-pdf me-1"></i> Export Medical PDF
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter & Search Controls -->
+  <div class="bb-card p-3 mb-4">
+    <form method="GET" class="row g-2 align-items-end">
+      <!-- Search -->
+      <div class="col-md-3">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Search</label>
+        <div class="input-group input-group-sm">
+          <input type="text" name="q" class="form-control border-secondary" placeholder="Case ID, Tag, Diagnosis..." value="{{ q }}" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+        </div>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="col-md-2">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Case Status</label>
+        <select name="status" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <option value="ALL" {% if status_filter == 'ALL' %}selected{% endif %}>All Statuses</option>
+          {% for code, label in status_choices %}
+            <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Stage Filter -->
+      <div class="col-md-2">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Rehab Stage</label>
+        <select name="stage" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <option value="ALL" {% if stage_filter == 'ALL' %}selected{% endif %}>All Stages</option>
+          {% for code, label in stage_choices %}
+            <option value="{{ code }}" {% if stage_filter == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Priority Filter -->
+      <div class="col-md-1">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Priority</label>
+        <select name="priority" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <option value="ALL" {% if priority_filter == 'ALL' %}selected{% endif %}>All</option>
+          {% for code, label in priority_choices %}
+            <option value="{{ code }}" {% if priority_filter == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Date Range -->
+      <div class="col-md-2">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Date Range</label>
+        <div class="d-flex gap-1">
+          <input type="date" name="from_date" class="form-control form-control-sm border-secondary" value="{{ from_date }}" title="From Date" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <input type="date" name="to_date" class="form-control form-control-sm border-secondary" value="{{ to_date }}" title="To Date" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="col-md-2 d-flex gap-1">
+        <button type="submit" class="btn btn-bb-sand btn-sm flex-fill fw-bold text-nowrap">
+          <i class="bi bi-funnel-fill me-1"></i> Apply
+        </button>
+        <a href="{% url 'admin_medical_records' %}" class="btn btn-outline-secondary btn-sm flex-fill text-nowrap" title="Reset all filters">
+          <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Medical Cases Table Card -->
+  <div class="bb-card p-4">
+    {% if cases %}
+      <div class="table-responsive">
+        <table class="table table-bb table-hover align-middle">
+          <thead>
+            <tr>
+              <th>Case ID</th>
+              <th>Incident Ref</th>
+              <th>Bird Patient</th>
+              <th>Case Date</th>
+              <th>Assigned Team / Vet</th>
+              <th>Condition & Diagnosis</th>
+              <th>Priority</th>
+              <th>Rehab Stage</th>
+              <th>Current Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in cases %}
+            <tr>
+              <td class="font-monospace text-success fw-bold">{{ c.case_id }}</td>
+              <td>
+                {% if c.incident %}
+                  <span class="badge font-monospace" style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--surface-border);">
+                    {{ c.incident.incident_id }}
+                  </span>
+                {% else %}
+                  <span class="text-muted small">Direct Intake</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if c.bustard %}
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="font-monospace text-warning fw-bold small">{{ c.bustard.tag_id }}</span>
+                    {% if c.bustard.name %}<span class="small text-muted">({{ c.bustard.name }})</span>{% endif %}
+                  </div>
+                {% else %}
+                  <span class="text-muted small">Unidentified / Wild</span>
+                {% endif %}
+              </td>
+              <td class="small font-monospace" style="color: var(--text-secondary);">
+                {{ c.created_at|date:"Y-m-d H:i" }}
+              </td>
+              <td>
+                {% if c.assigned_team %}
+                  <div class="small fw-semibold" style="color: var(--text-primary);">
+                    {{ c.assigned_team.get_full_name|default:c.assigned_team.username }}
+                  </div>
+                  {% if c.assigned_team.profile and c.assigned_team.profile.badge_number %}
+                    <div class="small font-monospace text-muted">{{ c.assigned_team.profile.badge_number }}</div>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted small">Unassigned / Open</span>
+                {% endif %}
+              </td>
+              <td style="max-width: 280px;">
+                <div class="fw-bold small text-truncate" style="color: var(--text-primary);" title="{{ c.condition_summary }}">
+                  {{ c.condition_summary }}
+                </div>
+                <div class="small text-muted text-truncate" title="{{ c.diagnosis|default:c.symptoms }}">
+                  {{ c.diagnosis|default:c.symptoms|truncatechars:70 }}
+                </div>
+              </td>
+              <td>
+                {% if c.priority == 'HIGH' or c.priority == 'CRITICAL' %}
+                  <span class="badge bg-danger">HIGH</span>
+                {% elif c.priority == 'MEDIUM' %}
+                  <span class="badge bg-warning text-dark">MEDIUM</span>
+                {% else %}
+                  <span class="badge bg-secondary">LOW</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if c.rehabilitation_stage == 'ICU' %}
+                  <span class="badge bg-danger">ICU Care</span>
+                {% elif c.rehabilitation_stage == 'RECOVERY_ENCLOSURE' %}
+                  <span class="badge bg-warning text-dark">Recovery</span>
+                {% elif c.rehabilitation_stage == 'PRE_RELEASE' %}
+                  <span class="badge bg-info text-dark">Pre-Release</span>
+                {% elif c.rehabilitation_stage == 'RELEASED' %}
+                  <span class="badge bg-success">Released</span>
+                {% elif c.rehabilitation_stage == 'DECEASED' %}
+                  <span class="badge bg-dark text-muted">Deceased</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ c.get_rehabilitation_stage_display }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if c.status == 'ACTIVE' %}
+                  <span class="badge bg-danger"><i class="bi bi-exclamation-circle me-1"></i>Active</span>
+                {% elif c.status == 'UNDER_TREATMENT' %}
+                  <span class="badge bg-warning text-dark"><i class="bi bi-bandaid me-1"></i>Treatment</span>
+                {% elif c.status == 'REHABILITATION' %}
+                  <span class="badge bg-info text-dark"><i class="bi bi-tree me-1"></i>In Rehab</span>
+                {% elif c.status == 'RECOVERED' %}
+                  <span class="badge bg-success"><i class="bi bi-check2-circle me-1"></i>Recovered</span>
+                {% elif c.status == 'CLOSED' %}
+                  <span class="badge bg-secondary">Closed</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ c.get_status_display }}</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination & Summary -->
+      <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-secondary flex-wrap gap-2">
+        <div class="small" style="color: var(--text-secondary);">
+          Showing records {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ filtered_count }} (Total in database: {{ total_count }})
+        </div>
+        {% if page_obj.has_other_pages %}
+          <nav aria-label="Page navigation">
+            <ul class="pagination pagination-sm mb-0">
+              {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link border-secondary" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if stage_filter != 'ALL' %}&stage={{ stage_filter }}{% endif %}{% if priority_filter != 'ALL' %}&priority={{ priority_filter }}{% endif %}{% if from_date %}&from_date={{ from_date }}{% endif %}{% if to_date %}&to_date={{ to_date }}{% endif %}">&laquo;</a>
+                </li>
+              {% endif %}
+              {% for p in page_obj.paginator.page_range %}
+                {% if p >= page_obj.number|add:'-2' and p <= page_obj.number|add:'2' %}
+                  <li class="page-item {% if page_obj.number == p %}active{% endif %}">
+                    <a class="page-link border-secondary" href="?page={{ p }}{% if q %}&q={{ q }}{% endif %}{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if stage_filter != 'ALL' %}&stage={{ stage_filter }}{% endif %}{% if priority_filter != 'ALL' %}&priority={{ priority_filter }}{% endif %}{% if from_date %}&from_date={{ from_date }}{% endif %}{% if to_date %}&to_date={{ to_date }}{% endif %}">{{ p }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+              {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link border-secondary" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if stage_filter != 'ALL' %}&stage={{ stage_filter }}{% endif %}{% if priority_filter != 'ALL' %}&priority={{ priority_filter }}{% endif %}{% if from_date %}&from_date={{ from_date }}{% endif %}{% if to_date %}&to_date={{ to_date }}{% endif %}">&raquo;</a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="bb-empty-state py-5 text-center">
+        <i class="bi bi-heart-pulse fs-1 text-muted mb-2 d-block"></i>
+        <h5 style="color: var(--text-primary);">No Medical Case Records Match Filter</h5>
+        <p class="text-muted small mb-3">Adjust your date range or clear filter criteria to see all cases.</p>
+        <a href="{% url 'admin_medical_records' %}" class="btn btn-outline-warning btn-sm">Reset All Filters</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

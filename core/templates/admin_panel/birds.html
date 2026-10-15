@@ -1,0 +1,611 @@
+{% extends 'base.html' %}
+
+{% block title %}Bird Master Register — Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+  <!-- Top Navigation & Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary btn-sm fw-bold">
+          <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+        </a>
+        <span class="badge bg-warning text-dark font-monospace fw-bold">{{ total_count }} Registered Birds</span>
+        {% if filtered_count != total_count %}
+          <span class="badge bg-secondary font-monospace">{{ filtered_count }} Matching Filter</span>
+        {% endif %}
+      </div>
+      <h3 class="brand-font mb-0" style="color: var(--text-primary);">
+        <i class="bi bi-twitter text-warning me-2"></i> Wildlife Population & Bird Master Register
+      </h3>
+      <div class="small" style="color: var(--text-secondary);">
+        Complete individual profile registry, species differentiation, nesting history, and medical health tracking.
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-success btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#birthRecordModal">
+        <i class="bi bi-egg-fill me-1"></i> Log Birth Record
+      </button>
+      <button class="btn btn-bb-sand btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#registerBirdModal">
+        <i class="bi bi-plus-circle me-1"></i> Register New Bird
+      </button>
+    </div>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div class="bb-card p-3 mb-4">
+    <form method="GET" class="row g-2 align-items-end">
+      <!-- Search Input -->
+      <div class="col-md-3">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Search Identifier</label>
+        <div class="input-group input-group-sm">
+          <input type="text" name="q" class="form-control border-secondary" placeholder="Tag ID, Name, Species..." value="{{ q }}" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+        </div>
+      </div>
+
+      <!-- Species Filter -->
+      <div class="col-md-2">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Species</label>
+        <select name="species" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <option value="ALL" {% if species_filter == 'ALL' %}selected{% endif %}>All Species</option>
+          {% for sp in species_list %}
+            <option value="{{ sp }}" {% if species_filter == sp %}selected{% endif %}>{{ sp }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="col-md-2">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Health Status</label>
+        <select name="status" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <option value="ALL" {% if status_filter == 'ALL' %}selected{% endif %}>All Health Statuses</option>
+          {% for code, label in health_choices %}
+            <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Zone / Location Filter -->
+      <div class="col-md-2">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Sanctuary Zone</label>
+        <select name="zone" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <option value="ALL" {% if zone_filter == 'ALL' %}selected{% endif %}>All Sanctuary Zones</option>
+          {% for z in zones %}
+            <option value="{{ z.id }}" {% if zone_filter == z.id|stringformat:"s" %}selected{% endif %}>{{ z.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Sorting Criteria -->
+      <div class="col-md-2">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Sort Records By</label>
+        <select name="sort" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Registration: Newest</option>
+          <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Registration: Oldest</option>
+          <option value="tag_asc" {% if sort_by == 'tag_asc' %}selected{% endif %}>Tag ID: A &rarr; Z</option>
+          <option value="tag_desc" {% if sort_by == 'tag_desc' %}selected{% endif %}>Tag ID: Z &rarr; A</option>
+          <option value="species" {% if sort_by == 'species' %}selected{% endif %}>Species Name</option>
+          <option value="status" {% if sort_by == 'status' %}selected{% endif %}>Health Status</option>
+        </select>
+      </div>
+
+      <!-- Buttons -->
+      <div class="col-md-1 d-flex gap-1">
+        <button type="submit" class="btn btn-bb-sand btn-sm flex-fill fw-bold text-nowrap" title="Apply filter & sorting">
+          <i class="bi bi-funnel-fill"></i>
+        </button>
+        <a href="{% url 'admin_birds' %}" class="btn btn-outline-secondary btn-sm flex-fill text-nowrap" title="Reset all filters">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </a>
+      </div>
+    </form>
+
+    <!-- Active Filter Chips -->
+    {% if q or species_filter != 'ALL' or status_filter != 'ALL' or zone_filter != 'ALL' or sort_by != 'newest' %}
+      <div class="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary flex-wrap">
+        <span class="small fw-bold text-muted">Active Criteria:</span>
+        {% if q %}
+          <span class="badge bg-secondary">Search: "{{ q }}"</span>
+        {% endif %}
+        {% if species_filter != 'ALL' %}
+          <span class="badge bg-warning text-dark">Species: {{ species_filter }}</span>
+        {% endif %}
+        {% if status_filter != 'ALL' %}
+          <span class="badge bg-info text-dark">Status: {{ status_filter }}</span>
+        {% endif %}
+        {% if zone_filter != 'ALL' %}
+          <span class="badge bg-secondary">Zone Filtered</span>
+        {% endif %}
+        {% if sort_by != 'newest' %}
+          <span class="badge bg-dark border border-secondary text-light">Sort: {{ sort_by }}</span>
+        {% endif %}
+        <a href="{% url 'admin_birds' %}" class="small text-warning text-decoration-none ms-auto"><i class="bi bi-x-circle me-1"></i>Clear all</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="row g-4">
+    <!-- Bird Registry Table -->
+    <div class="col-lg-12">
+      <div class="bb-card p-4">
+        {% if birds %}
+          <div class="table-responsive">
+            <table class="table table-bb table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Photo</th>
+                  <th>Tag ID</th>
+                  <th>Name & Species</th>
+                  <th>Sex & Age</th>
+                  <th>Registered</th>
+                  <th>Location / Last Seen</th>
+                  <th>Health Status</th>
+                  <th>Monitoring & Cases</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for bird in birds %}
+                <tr>
+                  <td>
+                    {% if bird.birth_record and bird.birth_record.birth_image %}
+                      <img src="{{ bird.birth_record.birth_image.url }}" class="rounded border border-secondary zoomable-img" style="width: 50px; height: 50px; object-fit: cover;" alt="Birth Image Thumbnail">
+                    {% elif bird.images.first %}
+                      <img src="{{ bird.images.first.image.url }}" class="rounded border border-secondary zoomable-img" style="width: 50px; height: 50px; object-fit: cover;" alt="Bird Thumbnail">
+                    {% else %}
+                      <div class="rounded border border-secondary d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background-color: var(--bg-secondary);">
+                        <i class="bi bi-camera text-muted"></i>
+                      </div>
+                    {% endif %}
+                  </td>
+                  <td class="font-monospace text-warning fw-bold">{{ bird.tag_id }}</td>
+                  <td>
+                    <div class="fw-bold" style="color: var(--text-primary);">{{ bird.name|default:"—" }}</div>
+                    <div class="small text-muted">{{ bird.species }}</div>
+                  </td>
+                  <td>
+                    <span class="badge bg-secondary">{{ bird.get_sex_display }}</span>
+                    <div class="small text-muted">{{ bird.get_age_class_display }}</div>
+                  </td>
+                  <td class="small font-monospace" style="color: var(--text-secondary);">
+                    {{ bird.created_at|date:"Y-m-d" }}
+                  </td>
+                  <td>
+                    {% if bird.last_seen_zone %}
+                      <span class="badge" style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--surface-border);">
+                        <i class="bi bi-geo-alt-fill text-warning me-1"></i>{{ bird.last_seen_zone.name }}
+                      </span>
+                    {% else %}
+                      <span class="text-muted small">Sanctuary Zone</span>
+                    {% endif %}
+                    {% if bird.last_seen_date %}
+                      <div class="small text-muted">Seen: {{ bird.last_seen_date|date:"Y-m-d" }}</div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if bird.health_status == 'HEALTHY' %}
+                      <span class="badge bg-success">{{ bird.get_health_status_display }}</span>
+                    {% elif bird.health_status == 'INJURED' or bird.health_status == 'REHABILITATION' %}
+                      <span class="badge bg-danger">{{ bird.get_health_status_display }}</span>
+                    {% elif bird.health_status == 'DECEASED' %}
+                      <span class="badge" style="background-color: var(--bg-secondary); color: var(--text-secondary);">{{ bird.get_health_status_display }}</span>
+                    {% elif bird.health_status == 'UNDER_MONITORING' %}
+                      <span class="badge bg-info text-dark">{{ bird.get_health_status_display }}</span>
+                    {% else %}
+                      <span class="badge bg-warning text-dark">{{ bird.get_health_status_display }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% with ic=bird.incidents.count mc=bird.medical_cases.count %}
+                      <div class="d-flex align-items-center gap-1">
+                        {% if mc > 0 %}
+                          <span class="badge bg-success" title="{{ mc }} Medical Case(s)">
+                            <i class="bi bi-heart-pulse me-1"></i>{{ mc }}
+                          </span>
+                        {% endif %}
+                        {% if ic > 0 %}
+                          <span class="badge bg-warning text-dark" title="{{ ic }} Incident Alert(s)">
+                            <i class="bi bi-shield me-1"></i>{{ ic }}
+                          </span>
+                        {% endif %}
+                        {% if mc == 0 and ic == 0 %}
+                          <span class="text-muted small">Normal</span>
+                        {% endif %}
+                      </div>
+                    {% endwith %}
+                  </td>
+                  <td>
+                    <div class="d-flex flex-wrap gap-1">
+                      <button class="btn btn-outline-info btn-sm py-0 px-2" data-bs-toggle="modal" data-bs-target="#infoModal{{ bird.id }}">
+                        <i class="bi bi-info-circle"></i> Info
+                      </button>
+                      
+                      {% if bird.health_status == 'MISSING' %}
+                        <button class="btn btn-outline-success btn-sm py-0 px-2" data-bs-toggle="modal" data-bs-target="#foundModal{{ bird.id }}">
+                          <i class="bi bi-check-circle"></i> Found
+                        </button>
+                      {% elif bird.health_status != 'DECEASED' %}
+                        <button class="btn btn-outline-danger btn-sm py-0 px-2" data-bs-toggle="modal" data-bs-target="#deathModal{{ bird.id }}">
+                          <i class="bi bi-x-circle"></i> Death
+                        </button>
+                        <button class="btn btn-outline-warning btn-sm py-0 px-2" data-bs-toggle="modal" data-bs-target="#missingModal{{ bird.id }}">
+                          <i class="bi bi-question-circle"></i> Missing
+                        </button>
+                      {% endif %}
+                    </div>
+                    
+                    <!-- Info Modal -->
+                    <div class="modal fade" id="infoModal{{ bird.id }}" tabindex="-1">
+                      <div class="modal-dialog modal-lg">
+                        <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+                          <div class="modal-header border-secondary">
+                            <h5 class="modal-title" style="color: var(--text-primary);"><i class="bi bi-card-text text-info me-2"></i> {{ bird.tag_id }} Details</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter);"></button>
+                          </div>
+                          <div class="modal-body text-start">
+                            <div class="row">
+                              <div class="col-md-6 mb-3">
+                                <h6 style="color: var(--text-primary);">Bird Information</h6>
+                                <table class="table table-sm table-borderless" style="color: var(--text-secondary);">
+                                  <tr><th>Name:</th><td>{{ bird.name|default:"—" }}</td></tr>
+                                  <tr><th>Species:</th><td>{{ bird.species }}</td></tr>
+                                  <tr><th>Sex:</th><td>{{ bird.get_sex_display }}</td></tr>
+                                  <tr><th>Age Class:</th><td>{{ bird.get_age_class_display }}</td></tr>
+                                  <tr><th>Status:</th><td>{{ bird.get_health_status_display }}</td></tr>
+                                </table>
+                              </div>
+                              <div class="col-md-6 mb-3">
+                                <h6 style="color: var(--text-primary);">Photos</h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                  {% if bird.birth_record and bird.birth_record.birth_image %}
+                                    <div class="card bg-dark text-white border-0" style="width: 120px;">
+                                      <img src="{{ bird.birth_record.birth_image.url }}" class="card-img zoomable-img" alt="Birth Image" style="object-fit: cover; height: 120px;">
+                                      <div class="card-img-overlay p-1 d-flex flex-column justify-content-end">
+                                        <small class="bg-dark bg-opacity-75 px-1 rounded">Birth</small>
+                                      </div>
+                                    </div>
+                                  {% endif %}
+                                  {% for img in bird.images.all %}
+                                    <div class="card bg-dark text-white border-0" style="width: 120px;">
+                                      <img src="{{ img.image.url }}" class="card-img zoomable-img" alt="Profile Image" style="object-fit: cover; height: 120px;">
+                                    </div>
+                                  {% endfor %}
+                                  {% if not bird.birth_record.birth_image and not bird.images.exists %}
+                                    <div class="text-muted small fst-italic py-3">No image available</div>
+                                  {% endif %}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Found Modal -->
+                    <div class="modal fade" id="foundModal{{ bird.id }}" tabindex="-1">
+                      <div class="modal-dialog">
+                        <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+                          <div class="modal-header border-secondary">
+                            <h5 class="modal-title text-success">Record Found: {{ bird.tag_id }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                          </div>
+                          <div class="modal-body">
+                            <form method="POST">
+                              {% csrf_token %}
+                              <input type="hidden" name="action" value="record_found">
+                              <input type="hidden" name="bird_id" value="{{ bird.id }}">
+                              <div class="mb-3">
+                                <label class="form-label small fw-bold" style="color: var(--text-secondary);">Date Found</label>
+                                <input type="date" name="found_date" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+                              </div>
+                              <div class="mb-3">
+                                <label class="form-label small fw-bold" style="color: var(--text-secondary);">Found By</label>
+                                <input type="text" name="found_by" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Name of person or team" required>
+                              </div>
+                              <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Found Lat</label>
+                                  <input type="number" step="any" name="found_latitude" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                                </div>
+                                <div class="col-6">
+                                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Found Lng</label>
+                                  <input type="number" step="any" name="found_longitude" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                                </div>
+                              </div>
+                              <div class="mb-3">
+                                <label class="form-label small fw-bold" style="color: var(--text-secondary);">Notes / Circumstances</label>
+                                <textarea name="found_notes" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" rows="2"></textarea>
+                              </div>
+                              <button type="submit" class="btn btn-success w-100 fw-bold">Confirm Bird Found</button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Death Modal -->
+                    <div class="modal fade" id="deathModal{{ bird.id }}" tabindex="-1">
+                      <div class="modal-dialog">
+                        <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+                          <div class="modal-header border-secondary">
+                            <h5 class="modal-title text-danger">Record Death: {{ bird.tag_id }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                          </div>
+                          <div class="modal-body">
+                            <form method="POST">
+                              {% csrf_token %}
+                              <input type="hidden" name="action" value="record_death">
+                              <input type="hidden" name="bird_id" value="{{ bird.id }}">
+                              <div class="mb-3">
+                                <label class="form-label small fw-bold" style="color: var(--text-secondary);">Date of Death</label>
+                                <input type="date" name="date_of_death" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+                              </div>
+                              <div class="mb-3">
+                                <label class="form-label small fw-bold" style="color: var(--text-secondary);">Primary Cause</label>
+                                <input type="text" name="cause_of_death" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="e.g. Power Line Collision, Natural Causes" required>
+                              </div>
+                              <button type="submit" class="btn btn-danger w-100">Confirm Death Record</button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Missing Modal -->
+                    <div class="modal fade" id="missingModal{{ bird.id }}" tabindex="-1">
+                      <div class="modal-dialog">
+                        <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+                          <div class="modal-header border-secondary">
+                            <h5 class="modal-title text-warning">Record Missing: {{ bird.tag_id }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                          </div>
+                          <div class="modal-body">
+                            <form method="POST">
+                              {% csrf_token %}
+                              <input type="hidden" name="action" value="record_missing">
+                              <input type="hidden" name="bird_id" value="{{ bird.id }}">
+                              <div class="mb-3">
+                                <label class="form-label small fw-bold" style="color: var(--text-secondary);">Date Reported Missing</label>
+                                <input type="date" name="reported_missing_date" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+                              </div>
+                              <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Last Lat</label>
+                                  <input type="number" step="any" name="last_known_latitude" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                                </div>
+                                <div class="col-6">
+                                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Last Lng</label>
+                                  <input type="number" step="any" name="last_known_longitude" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                                </div>
+                              </div>
+                              <div class="mb-3">
+                                <label class="form-label small fw-bold" style="color: var(--text-secondary);">Notes / Circumstances</label>
+                                <textarea name="notes" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" rows="2"></textarea>
+                              </div>
+                              <button type="submit" class="btn btn-warning w-100 fw-bold">Confirm Missing Record</button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="bb-empty-state">
+            <i class="bi bi-twitter"></i>
+            <h6>No Great Indian Bustard profiles registered.</h6>
+            <p class="text-muted small mb-0">Register the first bird monitoring tag using the form.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Modals for Forms -->
+    
+    <!-- Register Bird Modal -->
+    <div class="modal fade" id="registerBirdModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title text-warning brand-font"><i class="bi bi-plus-circle me-1"></i> Register New Bird Profile</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter);"></button>
+          </div>
+          <form method="POST" enctype="multipart/form-data">
+            <div class="modal-body text-start">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="create_bird">
+              
+              <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Tag ID <span class="text-danger">*</span></label>
+                  <input type="text" name="tag_id" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="e.g. GIB-NNJ-005" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Name (Optional)</label>
+                  <input type="text" name="name" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Field identifier name">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Sex <span class="text-danger">*</span></label>
+                  <select name="sex" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                    <option value="UNKNOWN" selected>Unknown</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Species Name <span class="text-danger">*</span></label>
+                  <select name="species_select" id="species_select" class="form-select border-secondary mb-1" style="background-color: var(--bg-secondary); color: var(--text-primary);" onchange="document.getElementById('custom_species_div').classList.toggle('d-none', this.value !== 'Other');">
+                    <option value="Great Indian Bustard">Great Indian Bustard</option>
+                    <option value="Lesser Florican">Lesser Florican</option>
+                    <option value="Bengal Florican">Bengal Florican</option>
+                    <option value="Other">Other (Specify)</option>
+                  </select>
+                  <div id="custom_species_div" class="d-none">
+                    <input type="text" name="species_custom" class="form-control border-secondary form-control-sm" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Specify Species Name">
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Age Class</label>
+                  <select name="age_class" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                    <option value="JUVENILE">Chick / Juvenile</option>
+                    <option value="SUB_ADULT">Sub-Adult</option>
+                    <option value="ADULT" selected>Adult</option>
+                    <option value="OLD">Old</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Initial Health Status</label>
+                  <select name="health_status" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                    <option value="HEALTHY" selected>Healthy / Active</option>
+                    <option value="UNDER_MONITORING">Under Monitoring</option>
+                    <option value="INJURED">Injured</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="row g-3 mb-3">
+                <div class="col-md-12">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Bird Images (Multiple)</label>
+                  <input type="file" name="bird_images" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" accept="image/*" multiple onchange="previewImages(event, 'birdImagePreviewContainer')">
+                  <div class="mt-3 d-flex flex-wrap gap-2 d-none" id="birdImagePreviewContainer">
+                    <!-- Previews will be injected here -->
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-3 mb-3">
+                <div class="col-md-12">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Field Notes</label>
+                  <textarea name="nesting_notes" rows="2" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Nesting area, behaviour, observations..."></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer border-secondary">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-bb-sand fw-bold">Register Bird Profile</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log Birth Record Modal -->
+    <div class="modal fade" id="birthRecordModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title text-success brand-font"><i class="bi bi-egg-fill me-1"></i> Log Birth Record</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter);"></button>
+          </div>
+          <form method="POST" enctype="multipart/form-data">
+            <div class="modal-body text-start">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="record_birth">
+              
+              <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Mother Tag / Name</label>
+                  <input type="text" name="mother_tag" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="e.g. GIB-NNJ-002">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Sex <span class="text-danger">*</span></label>
+                  <select name="sex" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                    <option value="UNKNOWN" selected>Unknown</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Species Name <span class="text-danger">*</span></label>
+                  <select name="species_select" id="birth_species_select" class="form-select border-secondary mb-1" style="background-color: var(--bg-secondary); color: var(--text-primary);" onchange="document.getElementById('birth_custom_species_div').classList.toggle('d-none', this.value !== 'Other');">
+                    <option value="Great Indian Bustard">Great Indian Bustard</option>
+                    <option value="Lesser Florican">Lesser Florican</option>
+                    <option value="Bengal Florican">Bengal Florican</option>
+                    <option value="Other">Other (Specify)</option>
+                  </select>
+                  <div id="birth_custom_species_div" class="d-none">
+                    <input type="text" name="species_custom" class="form-control border-secondary form-control-sm" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Specify Species Name">
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Hatch Date <span class="text-danger">*</span></label>
+                  <input type="date" name="hatch_date" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Nest Zone</label>
+                  <select name="nest_zone" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                    <option value="">-- Unknown / Unassigned --</option>
+                    {% for z in zones %}
+                      <option value="{{ z.id }}">{{ z.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-12">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Hatchling Images (Multiple) <span class="text-danger">*</span></label>
+                  <input type="file" name="birth_image" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" accept="image/*" multiple required onchange="previewImages(event, 'birthImagePreviewContainer')">
+                  <div class="mt-3 d-flex flex-wrap gap-2 d-none" id="birthImagePreviewContainer">
+                    <!-- Previews will be injected here -->
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-3 mb-3">
+                <div class="col-md-12">
+                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Notes</label>
+                  <textarea name="notes" rows="2" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);"></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer border-secondary">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-outline-success fw-bold">Log Birth Record</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function previewImages(event, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = ''; // Clear previous previews
+  const files = event.target.files;
+  
+  if (files && files.length > 0) {
+    container.classList.remove('d-none');
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const reader = new FileReader();
+      
+      reader.onload = function(e) {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.className = 'img-fluid rounded border border-secondary';
+        img.style.maxHeight = '120px';
+        img.style.objectFit = 'cover';
+        img.style.width = '120px';
+        img.alt = 'Image Preview ' + (i + 1);
+        container.appendChild(img);
+      }
+      
+      reader.readAsDataURL(file);
+    }
+  } else {
+    container.classList.add('d-none');
+  }
+}
+</script>
+{% endblock %}

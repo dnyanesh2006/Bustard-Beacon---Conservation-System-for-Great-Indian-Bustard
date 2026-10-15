@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}About Great Indian Bustard Conservation — BUSTARD BEACON{% endblock %}
+
+{% block content %}
+<div class="container my-5" style="max-width: 1000px;">
+  <div class="bb-card p-5">
+    <span class="text-warning font-monospace text-uppercase fw-bold"><i class="bi bi-info-circle-fill me-1"></i> Official Context</span>
+    <h2 class="text-light brand-font mb-4">Great Indian Bustard (*Ardeotis nigriceps*)</h2>
+
+    <div class="row g-4 mb-4">
+      <div class="col-md-6">
+        <div class="p-3 bg-dark rounded border border-secondary">
+          <h6 class="text-warning brand-font">Conservation Status</h6>
+          <p class="text-secondary small mb-0">Critically Endangered under IUCN Red List & Schedule I of Wildlife Protection Act, 1972.</p>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="p-3 bg-dark rounded border border-secondary">
+          <h6 class="text-warning brand-font">Sanctuary Headquarters</h6>
+          <p class="text-secondary small mb-0">Great Indian Bustard Sanctuary, Nannaj / Solapur District, Maharashtra, India.</p>
+        </div>
+      </div>
+    </div>
+
+    <h5 class="text-light brand-font mt-4 mb-3">1. Species & Habitat Overview</h5>
+    <p class="text-secondary">
+      The Great Indian Bustard is an iconic grassland bird species characterized by its large body size, horizontal body carriage, long bare legs, and distinctive black crown on the forehead. Adult males weigh up to 15 kg and display elaborate courtship displays in short-grass prairies during breeding seasons.
+    </p>
+
+    <h5 class="text-light brand-font mt-4 mb-3">2. Nannaj / Solapur Geography</h5>
+    <p class="text-secondary">
+      Solapur district in Maharashtra encompasses key semi-arid grassland ecosystems. Official Maharashtra forest administration recognizes Nannaj as a premier sanctuary headquarters. The sanctuary features core breeding pockets, seasonal buffer migration corridors, and regulated eco-tourism zones.
+    </p>
+
+    <h5 class="text-light brand-font mt-4 mb-3">3. Primary Conservation Threats</h5>
+    <ul class="text-secondary">
+      <li><b>Power Line Collisions:</b> Poor frontal vision makes bustards vulnerable to high-tension power cables. Installation of bird flight diverters is a priority intervention.</li>
+      <li><b>Habitat Loss & Encroachment:</b> Conversion of natural short grasslands into intensive agriculture or industrial plots.</li>
+      <li><b>Nest Disturbance & Predation:</b> Ground-nesting habits expose single-egg clutches to feral dogs and disturbance during incubation.</li>
+    </ul>
+
+    <h5 class="text-light brand-font mt-4 mb-3">4. Data Provenance & Location Protection Policy</h5>
+    <p class="text-secondary">
+      To prevent poaching threats and unmonitored human intrusion into sensitive nesting areas, exact operational coordinates are strictly restricted based on user authorization level (Ranger, Forest Officer, Medical Team). Public research views feature generalized grid locations.
+    </p>
+
+    <div class="mt-4 pt-3 border-top border-secondary text-center">
+      <a href="{% url 'live_map' %}" class="btn btn-bb-sand px-4 me-2"><i class="bi bi-map"></i> Open Conservation Map</a>
+      <a href="{% url 'landing' %}" class="btn btn-outline-light px-4">Back to Homepage</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

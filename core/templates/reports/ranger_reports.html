@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Ranger Report Center — BUSTARD BEACON{% endblock %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 1000px;">
+  <!-- Header Banner -->
+  <div class="bb-card p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge bg-warning text-dark fw-bold px-2 py-1">RANGER FIELD PORTAL</span>
+          <span class="text-secondary small font-monospace">{{ user.get_full_name|default:user.username }}</span>
+        </div>
+        <h3 class="brand-font mb-1" style="color: var(--text-primary);">
+          <i class="bi bi-file-earmark-pdf text-warning me-2"></i> Ranger Field Report Center
+        </h3>
+        <p class="small mb-0" style="color: var(--text-secondary);">
+          Generate and download official PDF reports of your personal field patrol observations, sightings, and threat reports.
+        </p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{% url 'ranger_field_mode' %}" class="btn btn-bb-sand btn-sm fw-bold">
+          <i class="bi bi-phone me-1"></i> Field Mode
+        </a>
+        <a href="{% url 'ranger_incidents' %}" class="btn btn-outline-secondary btn-sm fw-bold">
+          <i class="bi bi-clock-history me-1"></i> Submitted Incidents
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONE SINGLE CLEAR REPORT GENERATION OPTION -->
+  <div class="bb-card p-4 border-start border-warning border-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div>
+        <span class="badge bg-warning text-dark fw-bold mb-1">OFFICIAL FIELD REPORT</span>
+        <h4 class="brand-font mb-0" style="color: var(--text-primary);">
+          <i class="bi bi-shield-check text-warning me-2"></i> Field Patrol & Incident Report
+        </h4>
+        <div class="small" style="color: var(--text-secondary);">
+          Personal historical reports submitted by Ranger <b>{{ user.get_full_name|default:user.username }}</b> (Badge: {{ user.profile.badge_number|default:"N/A" }}).
+        </div>
+      </div>
+      <span class="badge bg-secondary font-monospace">{{ total_count }} Recorded Submissions</span>
+    </div>
+
+    <p class="text-muted small mb-4">
+      Includes verified bustard sightings, wildlife threat observations, powerline hazards, and habitat alerts recorded under your ranger credential.
+    </p>
+
+    <!-- Filter & Download Form -->
+    <form method="GET" action="{% url 'report_center' %}" class="p-3 rounded mb-4 border border-secondary" style="background-color: var(--bg-secondary);">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Start Date</label>
+          <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">End Date</label>
+          <input type="date" name="date_to" value="{{ date_to }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+        </div>
+        <div class="col-md-6 d-flex align-items-center gap-2 flex-wrap flex-md-nowrap">
+          <button type="submit" class="btn btn-bb-yellow-black btn-sm fw-bold text-nowrap px-3">
+            <i class="bi bi-funnel"></i> Apply Filter
+          </button>
+          <a href="{% url 'report_center' %}" class="btn btn-outline-secondary btn-sm fw-bold text-nowrap px-3">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset
+          </a>
+          <button type="submit" formaction="{% url 'download_pdf_report' %}" name="type" value="FIELD_PATROL_INCIDENT_REPORT" class="btn btn-warning btn-sm fw-bold text-nowrap px-3 ms-md-auto">
+            <i class="bi bi-file-earmark-pdf"></i> Download PDF
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Table of Logged-In Ranger's Own Incidents -->
+    <div class="table-responsive">
+      <table class="table table-bb table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Incident ID</th>
+            <th>Category</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Reported Date</th>
+            <th>Zone / Location</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inc in incidents %}
+          <tr>
+            <td class="font-monospace text-warning fw-bold">{{ inc.incident_id }}</td>
+            <td style="color: var(--text-primary);">
+              <b>{{ inc.get_category_display }}</b>
+              {% if inc.description %}<div class="small text-muted">{{ inc.description|truncatechars:45 }}</div>{% endif %}
+            </td>
+            <td>
+              {% if inc.priority == 'CRITICAL' %}<span class="badge bg-danger">CRITICAL</span>
+              {% elif inc.priority == 'HIGH' %}<span class="badge bg-warning text-dark">HIGH</span>
+              {% elif inc.priority == 'MEDIUM' %}<span class="badge bg-info text-dark">MEDIUM</span>
+              {% else %}<span class="badge bg-success">LOW</span>{% endif %}
+            </td>
+            <td>
+              {% if inc.status == 'VERIFIED' %}<span class="badge bg-success">VERIFIED</span>
+              {% elif inc.status == 'PENDING' %}<span class="badge bg-warning text-dark">PENDING</span>
+              {% elif inc.status == 'REJECTED' %}<span class="badge bg-danger">REJECTED</span>
+              {% else %}<span class="badge bg-secondary">{{ inc.status }}</span>{% endif %}
+            </td>
+            <td class="small font-monospace" style="color: var(--text-secondary);">{{ inc.reported_at|date:"Y-m-d H:i" }}</td>
+            <td class="small" style="color: var(--text-secondary);">
+              {{ inc.location.zone.name|default:"Solapur Buffer" }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center py-5 text-muted">
+              <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
+              <h6>No field incidents found for this period.</h6>
+              <p class="small mb-0">Use Ranger Field Mode to submit your observation or threat alerts.</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Security notice -->
+    <div class="mt-4 p-3 rounded border border-secondary" style="background-color: var(--bg-secondary);">
+      <div class="small text-muted">
+        <i class="bi bi-shield-lock text-success me-1"></i>
+        <b>Privacy Protection:</b> Your report interface exclusively accesses records authored by your ranger account. Other team records are protected.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

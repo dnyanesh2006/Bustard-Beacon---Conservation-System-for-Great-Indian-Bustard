@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}High-Risk Zone Analysis — Research Portal{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="brand-font" style="color: var(--text-primary);"><i class="bi bi-shield-exclamation text-danger me-2"></i> High-Risk Area Analysis</h3>
+    <a href="{% url 'research_dashboard' %}" class="btn btn-sm btn-outline-secondary">Back to Dashboard</a>
+  </div>
+
+  <div class="bb-card p-4">
+    <div class="small mb-4" style="color: var(--text-secondary);">
+      Risk analysis is computed based on verified incident density, critical event counts, and priority weightings across all conservation zones.
+    </div>
+
+    {% if risk_zones %}
+      <div class="table-responsive">
+        <table class="table table-bb align-middle">
+          <thead>
+            <tr>
+              <th>Conservation Zone</th>
+              <th>Total Incidents</th>
+              <th>Critical Priorities</th>
+              <th>Risk Score</th>
+              <th>Calculated Risk Level</th>
+              <th>Main Contributing Factor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in risk_zones %}
+            <tr>
+              <td><b style="color: var(--text-primary);">{{ item.zone.name }}</b><br><small class="text-muted">{{ item.zone.get_zone_type_display }}</small></td>
+              <td style="color: var(--text-primary);">{{ item.total_incidents }}</td>
+              <td class="text-danger fw-bold">{{ item.critical_count }}</td>
+              <td class="font-monospace fw-bold text-warning">{{ item.risk_score }}</td>
+              <td><span class="badge bg-{{ item.badge_class }}">{{ item.risk_level }}</span></td>
+              <td class="small text-muted">
+                {% if item.critical_count > 0 %}Critical priority occurrences
+                {% elif item.total_incidents > 3 %}High incident density
+                {% else %}Standard monitoring baseline{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="bb-empty-state py-5">
+        <i class="bi bi-shield-check"></i>
+        <h6>No high-risk zones detected.</h6>
+        <p class="text-muted small mb-0">Current incident levels are below threshold, or no zones are configured.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

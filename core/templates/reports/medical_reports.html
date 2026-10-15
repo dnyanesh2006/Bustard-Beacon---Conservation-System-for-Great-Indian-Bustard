@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}Medical Team Report Center — BUSTARD BEACON{% endblock %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 1100px;">
+  <!-- Header Banner -->
+  <div class="bb-card p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge bg-danger fw-bold px-2 py-1">VETERINARY CLINICAL PORTAL</span>
+          <span class="text-secondary small font-monospace">{{ user.get_full_name|default:user.username }}</span>
+        </div>
+        <h3 class="brand-font mb-1" style="color: var(--text-primary);">
+          <i class="bi bi-file-earmark-pdf text-danger me-2"></i> Veterinary Medical Report Center
+        </h3>
+        <p class="small mb-0" style="color: var(--text-secondary);">
+          Official clinical report generation for cases assigned to or treated by your veterinary medical team.
+        </p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{% url 'medical_dashboard' %}" class="btn btn-outline-secondary btn-sm fw-bold">
+          <i class="bi bi-arrow-left me-1"></i> Medical Dashboard
+        </a>
+        <a href="{% url 'medical_cases' %}" class="btn btn-outline-warning btn-sm fw-bold">
+          <i class="bi bi-hospital me-1"></i> All Cases
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Medical Report Interface -->
+  <div class="bb-card p-4 border-start border-danger border-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div>
+        <span class="badge bg-danger fw-bold mb-1">CLINICAL TREATMENT DOCUMENTATION</span>
+        <h4 class="brand-font mb-0" style="color: var(--text-primary);">
+          <i class="bi bi-heart-pulse-fill text-danger me-2"></i> Medical & Rescue Operations Report
+        </h4>
+        <div class="small" style="color: var(--text-secondary);">
+          Authorized records for <b>{{ user.get_full_name|default:user.username }}</b>. Other clinical teams' records are restricted.
+        </div>
+      </div>
+      <span class="badge bg-secondary font-monospace">{{ total_count }} Cases Matched</span>
+    </div>
+
+    <!-- Filter Form -->
+    <form method="GET" action="{% url 'report_center' %}" class="p-3 rounded mb-4 border border-secondary" style="background-color: var(--bg-secondary);">
+      <div class="row g-2 align-items-end mb-2">
+        <div class="col-md-12">
+          <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Case Category / Milestone</label>
+          <select name="sub_category" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            <option value="ALL" {% if sub_category == 'ALL' %}selected{% endif %}>All Assigned Cases</option>
+            <option value="ACTIVE" {% if sub_category == 'ACTIVE' %}selected{% endif %}>Active Cases (Emergency & Treatment)</option>
+            <option value="ICU" {% if sub_category == 'ICU' %}selected{% endif %}>ICU Intensive Care Patients</option>
+            <option value="RECOVERED" {% if sub_category == 'RECOVERED' %}selected{% endif %}>Recovered & Pre-Release Patients</option>
+            <option value="DEATH" {% if sub_category == 'DEATH' %}selected{% endif %}>Deceased Bird Death Records</option>
+          </select>
+        </div>
+      </div>
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Start Date</label>
+          <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">End Date</label>
+          <input type="date" name="date_to" value="{{ date_to }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+        </div>
+        <div class="col-md-6 d-flex align-items-center gap-2 flex-wrap flex-md-nowrap">
+          <button type="submit" class="btn btn-danger btn-sm fw-bold text-nowrap px-3">
+            <i class="bi bi-funnel"></i> Apply Filter
+          </button>
+          <a href="{% url 'report_center' %}" class="btn btn-outline-secondary btn-sm fw-bold text-nowrap px-3">
+            <i class="bi bi-arrow-counterclockwise"></i> Reset
+          </a>
+          <button type="submit" formaction="{% url 'download_pdf_report' %}" name="type" value="MEDICAL_RESCUE_REPORT" class="btn btn-outline-danger btn-sm fw-bold text-nowrap px-3 ms-md-auto">
+            <i class="bi bi-download"></i> Download PDF
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Table of Cases -->
+    <div class="table-responsive">
+      <table class="table table-bb table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Case ID</th>
+            <th>Incident Ref</th>
+            <th>Bird Tag</th>
+            <th>Condition & Symptoms</th>
+            <th>Rehab Stage</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th style="width: 140px; min-width: 135px;" class="text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in cases %}
+          <tr>
+            <td class="font-monospace text-danger fw-bold">{{ c.case_id }}</td>
+            <td class="font-monospace small text-secondary">{{ c.incident.incident_id|default:"Direct Entry" }}</td>
+            <td>
+              {% if c.bustard %}
+                <span class="badge bg-warning text-dark font-monospace">{{ c.bustard.tag_id }}</span>
+              {% else %}
+                <span class="text-muted small">Unregistered</span>
+              {% endif %}
+            </td>
+            <td>
+              <b style="color: var(--text-primary);">{{ c.condition_summary }}</b>
+              {% if c.diagnosis %}<div class="small text-muted">{{ c.diagnosis|truncatechars:35 }}</div>{% endif %}
+            </td>
+            <td><span class="badge bg-secondary">{{ c.get_rehabilitation_stage_display }}</span></td>
+            <td><span class="badge bg-warning text-dark">{{ c.get_status_display }}</span></td>
+            <td class="small font-monospace" style="color: var(--text-secondary);">{{ c.created_at|date:"Y-m-d" }}</td>
+            <td class="text-center">
+              <a href="{% url 'medical_case_detail' c.id %}" class="btn btn-bb-sand btn-sm py-1 px-2 fw-bold text-nowrap d-inline-flex align-items-center justify-content-center gap-1" style="line-height: 1.2; font-size: 0.8rem;" title="Open Clinical View">
+                <i class="bi bi-bandaid"></i> <span>Clinical View</span>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-5 text-muted">
+              <i class="bi bi-heart-pulse fs-1 d-block mb-2 text-secondary"></i>
+              <h6>No medical cases found matching this filter.</h6>
+              <p class="small mb-0">Only medical cases assigned to or created by your account are displayed.</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Privacy Note -->
+    <div class="mt-4 p-3 rounded border border-secondary" style="background-color: var(--bg-secondary);">
+      <div class="small text-muted">
+        <i class="bi bi-shield-check text-success me-1"></i>
+        <b>Authorized Scope:</b> Confidential veterinary patient records are restricted to your assigned clinical caseload. System Administrators maintain overall access.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

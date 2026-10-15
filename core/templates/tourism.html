@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tourism & Visitor Guidelines — BUSTARD BEACON{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 900px;">
+  <div class="text-center mb-5">
+    <h2 class="brand-font" style="color: var(--text-primary);"><i class="bi bi-geo-alt-fill text-bb-forest"></i> Tourism & Visitor Guidelines</h2>
+    <p class="lead text-secondary">Great Indian Bustard Sanctuary, Nannaj</p>
+  </div>
+
+  <div class="bb-card p-4 mb-4">
+    <h4 class="brand-font mb-3 text-warning"><i class="bi bi-shield-exclamation me-2"></i> Important Notice</h4>
+    <p style="color: var(--text-primary);">
+      The Great Indian Bustard Sanctuary is primarily a conservation zone. To protect the critically endangered Bustard population and their natural habitat, all visits are strictly regulated.
+    </p>
+    <ul style="color: var(--text-secondary);">
+      <li><strong>Prior permission is mandatory</strong> for visiting core areas.</li>
+      <li>Do not litter, play loud music, or disturb the wildlife.</li>
+      <li>Vehicles must be parked at designated parking areas.</li>
+      <li>Follow the instructions of Forest Officers and Rangers at all times.</li>
+    </ul>
+  </div>
+
+  <h4 class="brand-font mb-4 mt-5" style="color: var(--text-primary);"><i class="bi bi-map me-2"></i> Current Zone Restrictions</h4>
+  
+  <div class="row g-4">
+    {% for restriction in restrictions %}
+    <div class="col-md-6">
+      <div class="bb-card p-4 h-100 border {% if restriction.status == 'PROHIBITED' %}border-danger{% elif restriction.status == 'RESTRICTED' %}border-warning{% else %}border-success{% endif %}">
+        <h5 class="fw-bold mb-1" style="color: var(--text-primary);">{{ restriction.zone.name }}</h5>
+        <div class="small text-muted mb-3 font-monospace">{{ restriction.zone.code }}</div>
+        
+        <div class="mb-3">
+          {% if restriction.status == 'ALLOWED' %}
+            <span class="badge bg-success fs-6"><i class="bi bi-check-circle"></i> {{ restriction.get_status_display }}</span>
+          {% elif restriction.status == 'RESTRICTED' %}
+            <span class="badge bg-warning text-dark fs-6"><i class="bi bi-exclamation-triangle"></i> {{ restriction.get_status_display }}</span>
+          {% else %}
+            <span class="badge bg-danger fs-6"><i class="bi bi-x-circle"></i> {{ restriction.get_status_display }}</span>
+          {% endif %}
+        </div>
+        
+        <p class="small mb-0" style="color: var(--text-secondary);"><strong>Reason:</strong> {{ restriction.restriction_reason }}</p>
+        <p class="small text-muted mt-2">Valid until: {{ restriction.valid_until|date:"M d, Y"|default:"Indefinite" }}</p>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+      <div class="bb-empty-state py-4">
+        <i class="bi bi-check-all"></i>
+        <h6>No specific tourism restrictions recorded at this time.</h6>
+        <p class="small text-muted">Standard sanctuary guidelines still apply.</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="text-center mt-5">
+    <a href="{% url 'public_map' %}" class="btn btn-bb-forest btn-lg fw-bold"><i class="bi bi-map-fill me-2"></i> View Interactive Map</a>
+  </div>
+</div>
+{% endblock %}

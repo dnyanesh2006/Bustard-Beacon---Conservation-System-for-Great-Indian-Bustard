@@ -1,0 +1,8 @@
+Django>=4.2,<6.2
+Pillow
+python-dotenv
+requests
+google-auth
+google-auth-oauthlib
+mysqlclient
+reportlab

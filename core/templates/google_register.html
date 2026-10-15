@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Request Account - BUSTARD BEACON{% endblock %}
+
+{% block content %}
+<div class="container my-5" style="max-width: 600px;">
+  <div class="row justify-content-center">
+    <div class="col-md-12">
+      <div class="bb-card p-0 shadow-lg overflow-hidden">
+        
+        <div class="bg-dark p-3 border-bottom border-secondary text-center">
+          <h3 class="text-light brand-font mb-0"><i class="bi bi-person-plus text-warning"></i> Request Staff Account</h3>
+        </div>
+
+        <div class="p-4 text-center">
+          <p class="text-secondary mb-4">No staff account was found matching the verified Google identity:</p>
+          
+          <div class="alert alert-dark border-secondary text-light fw-bold mb-4">
+            {{ email }}
+          </div>
+          
+          <p class="text-light mb-4">
+            Would you like to request a new BUSTARD BEACON account using this Google identity?<br>
+            <span class="text-warning small">Note: Your account will remain pending until approved and assigned a role by an Administrator.</span>
+          </p>
+
+          <form method="POST" action="{% url 'google_register' %}">
+            {% csrf_token %}
+            <div class="d-flex justify-content-center gap-3">
+              <a href="{% url 'login' %}" class="btn btn-outline-secondary px-4 fw-bold">Cancel</a>
+              <button type="submit" class="btn btn-bb-sand px-4 fw-bold">Request Account <i class="bi bi-arrow-right-short"></i></button>
+            </div>
+          </form>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

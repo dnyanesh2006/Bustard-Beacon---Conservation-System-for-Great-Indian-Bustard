@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% block title %}My Field Incidents — Ranger Portal{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="bb-card p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div>
+        <h4 class="text-light brand-font mb-0"><i class="bi bi-clock-history text-warning me-2"></i> My Field Incident Reports</h4>
+        <div class="text-secondary small">Historical reports submitted by {{ user.get_full_name|default:user.username }}</div>
+      </div>
+      <a href="{% url 'report_incident' %}" class="btn btn-bb-sand btn-sm"><i class="bi bi-plus-circle"></i> New Incident Report</a>
+    </div>
+
+    <!-- Filter & Report Generation Form -->
+    <form method="GET" action="{% url 'ranger_incidents' %}" class="row g-2 mb-4 align-items-end p-3 rounded border border-secondary" style="background-color: var(--bg-tertiary);">
+      <div class="col-md-3">
+        <label class="form-label small fw-bold text-secondary mb-1">From Date</label>
+        <input type="date" name="date_from" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" value="{{ date_from|default:'' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-bold text-secondary mb-1">To Date</label>
+        <input type="date" name="date_to" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" value="{{ date_to|default:'' }}">
+      </div>
+      <div class="col-md-6 d-flex gap-2">
+        <button type="submit" class="btn btn-bb-yellow-black btn-sm fw-bold px-3">
+          <i class="bi bi-funnel"></i> Filter
+        </button>
+        <a href="{% url 'ranger_incidents' %}" class="btn btn-outline-secondary btn-sm fw-bold px-3">
+          <i class="bi bi-arrow-counterclockwise"></i> Reset
+        </a>
+        <button type="submit" formaction="{% url 'download_pdf_report' %}" name="type" value="FIELD_PATROL_INCIDENT_REPORT" class="btn btn-warning btn-sm fw-bold px-3 ms-auto">
+          <i class="bi bi-file-earmark-pdf"></i> Generate Report
+        </button>
+      </div>
+    </form>
+
+    {% if incidents %}
+      <div class="table-responsive">
+        <table class="table table-bb table-hover align-middle">
+          <thead>
+            <tr>
+              <th>Incident ID</th>
+              <th>Category</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Reported Date</th>
+              <th>Zone / GPS</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inc in incidents %}
+              <tr>
+                <td class="font-monospace text-warning fw-bold">{{ inc.incident_id }}</td>
+                <td>{{ inc.get_category_display }}</td>
+                <td>
+                  {% if inc.priority == 'CRITICAL' %}<span class="badge bg-danger">CRITICAL</span>
+                  {% elif inc.priority == 'HIGH' %}<span class="badge bg-warning text-dark">HIGH</span>
+                  {% elif inc.priority == 'MEDIUM' %}<span class="badge bg-info text-dark">MEDIUM</span>
+                  {% else %}<span class="badge bg-success">LOW</span>{% endif %}
+                </td>
+                <td>
+                  {% if inc.status == 'VERIFIED' %}<span class="badge bg-success">VERIFIED</span>
+                  {% elif inc.status == 'PENDING' %}<span class="badge bg-warning text-dark">PENDING</span>
+                  {% elif inc.status == 'REJECTED' %}<span class="badge bg-danger">REJECTED</span>
+                  {% else %}<span class="badge bg-secondary">{{ inc.status }}</span>{% endif %}
+                </td>
+                <td>{{ inc.reported_at|date:"Y-m-d H:i" }}</td>
+                <td class="small">
+                  {% if inc.location and inc.location.zone %}
+                    {{ inc.location.zone.name }}
+                  {% else %}
+                    Nannaj Sector
+                  {% endif %}
+                </td>
+                <td>
+                  <button class="btn btn-outline-warning btn-sm py-1 px-2 fw-bold" data-bs-toggle="modal" data-bs-target="#incidentModal{{ inc.id }}">
+                    <i class="bi bi-eye"></i> View Incident Details
+                  </button>
+                </td>
+              </tr>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="bb-empty-state">
+        <i class="bi bi-folder-x"></i>
+        <h6>No field incidents recorded yet.</h6>
+        <p class="small text-muted mb-0">Use Ranger Field Mode to submit your first observation or threat report.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if incidents %}
+  {% for inc in incidents %}
+    <!-- Incident Details Modal -->
+    <div class="modal fade" id="incidentModal{{ inc.id }}" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title" style="color: var(--text-primary);"><i class="bi bi-card-text text-warning me-2"></i> Incident {{ inc.incident_id }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter);"></button>
+          </div>
+          <div class="modal-body text-start">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <h6 style="color: var(--text-primary);">Incident Information</h6>
+                <table class="table table-sm table-borderless" style="color: var(--text-secondary);">
+                  <tr><th>Category:</th><td>{{ inc.get_category_display }}</td></tr>
+                  <tr><th>Priority:</th><td>{{ inc.get_priority_display|default:"—" }}</td></tr>
+                  <tr><th>Status:</th><td>{{ inc.get_status_display }}</td></tr>
+                  <tr><th>Date/Time:</th><td>{{ inc.reported_at|date:"Y-m-d H:i" }}</td></tr>
+                  <tr><th>Ranger Identity:</th><td>{{ inc.reporter.get_full_name|default:inc.reporter.username }} ({{ inc.reporter.profile.badge_number|default:"N/A" }})</td></tr>
+                </table>
+                <h6 class="mt-3" style="color: var(--text-primary);">Description</h6>
+                <div class="p-2 rounded border border-secondary small" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                  {{ inc.description|default:"No description provided." }}
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <h6 style="color: var(--text-primary);">Location & GPS</h6>
+                {% if inc.location %}
+                  <div class="font-monospace small mb-2" style="color: var(--text-primary);">
+                    Lat: {{ inc.location.latitude|floatformat:5 }} | Lng: {{ inc.location.longitude|floatformat:5 }}
+                  </div>
+                  {% if google_maps_api_key %}
+                    <div id="incident-map-{{ inc.id }}" style="height: 150px; width: 100%; border-radius: 8px; background-color: #222;" class="border border-secondary mb-2" 
+                         data-lat="{{ inc.location.latitude }}" data-lng="{{ inc.location.longitude }}"></div>
+                  {% else %}
+                    <div class="alert alert-warning py-2 text-center small mb-2"><i class="bi bi-map me-1"></i> Map unavailable</div>
+                  {% endif %}
+                {% else %}
+                  <div class="text-muted small fst-italic">No coordinates available.</div>
+                {% endif %}
+              </div>
+            </div>
+            
+            <div class="row mt-3">
+              <div class="col-12">
+                <h6 style="color: var(--text-primary);">Incident Images</h6>
+                <div class="d-flex flex-wrap gap-2">
+                  {% for img in inc.images.all %}
+                    <div class="card bg-dark text-white border-0" style="width: 120px;">
+                      <a href="{{ img.image.url }}" target="_blank">
+                        <img src="{{ img.image.url }}" class="card-img zoomable-img" alt="Incident Photo" style="object-fit: cover; height: 120px; width: 120px; cursor: pointer;">
+                      </a>
+                    </div>
+                  {% empty %}
+                    <div class="text-muted small fst-italic py-2">No images were uploaded for this incident.</div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if google_maps_api_key %}
+<script>
+  (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
+    key: "{{ google_maps_api_key }}",
+    v: "weekly",
+  });
+</script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Keep track of maps we've initialized so we only do it once per modal
+    const initializedMaps = new Set();
+
+    // Listen for Bootstrap modal 'shown' events
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+      modal.addEventListener('shown.bs.modal', async function (event) {
+        const modalId = modal.id;
+        
+        // Find the map container inside this modal
+        const mapContainer = modal.querySelector('[id^="incident-map-"]');
+        if (mapContainer && !initializedMaps.has(modalId)) {
+          const lat = parseFloat(mapContainer.getAttribute('data-lat'));
+          const lng = parseFloat(mapContainer.getAttribute('data-lng'));
+          
+          if (!isNaN(lat) && !isNaN(lng)) {
+            const { Map } = await google.maps.importLibrary("maps");
+            const { Marker } = await google.maps.importLibrary("marker");
+            
+            const position = { lat: lat, lng: lng };
+            
+            const map = new Map(mapContainer, {
+              zoom: 15,
+              center: position,
+              mapTypeId: 'satellite',
+              disableDefaultUI: true,
+              zoomControl: true,
+            });
+            
+            new Marker({
+              map: map,
+              position: position
+            });
+            
+            initializedMaps.add(modalId);
+          }
+        }
+      });
+    });
+  });
+</script>
+{% endif %}
+{% endblock %}

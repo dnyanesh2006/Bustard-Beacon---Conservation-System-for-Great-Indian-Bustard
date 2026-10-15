@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Movement & Observation Tracks — Research Portal{% endblock %}
+
+{% block extra_head %}
+<style>
+  #migration-map { height: 480px; width: 100%; border-radius: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="brand-font" style="color: var(--text-primary);"><i class="bi bi-map text-warning me-2"></i> Movement & Observation Analysis</h3>
+    <a href="{% url 'research_dashboard' %}?from_date={{ from_date }}&to_date={{ to_date }}" class="btn btn-sm btn-outline-secondary">Back to Dashboard</a>
+  </div>
+
+  <div class="bb-card p-4 mb-4">
+    <div class="small mb-3" style="color: var(--text-secondary);">
+      Showing observed movement patterns and verified field sightings between <b>{{ from_date }}</b> and <b>{{ to_date }}</b>.
+    </div>
+
+    <!-- Map -->
+    <div id="migration-map" class="mb-3"></div>
+
+    <!-- Legend -->
+    <div class="d-flex gap-3 flex-wrap small">
+      <div><span class="d-inline-block rounded-circle" style="width:12px;height:12px;background:#43a047;"></span> Verified Field Sighting</div>
+      <div><span class="d-inline-block rounded-circle" style="width:12px;height:12px;background:#d4a373;"></span> Movement Observation Track</div>
+    </div>
+  </div>
+
+  <!-- Data Tables -->
+  <div class="row g-4">
+    <div class="col-lg-12">
+      <div class="bb-card p-4">
+        <h5 class="text-warning brand-font mb-2"><i class="bi bi-broadcast me-1"></i> Observation Records</h5>
+        {% if field_incidents or movements %}
+          <div class="table-responsive">
+            <table class="table table-bb table-sm align-middle">
+              <thead><tr><th>Date</th><th>Type</th><th>Details</th><th>Zone / Coords</th></tr></thead>
+              <tbody>
+                {% for inc in field_incidents %}
+                <tr>
+                  <td style="color: var(--text-primary);">{{ inc.reported_at|date:"Y-m-d H:i" }}</td>
+                  <td><span class="badge badge-provenance badge-field-report">Field Sighting</span></td>
+                  <td class="font-monospace small text-warning">{{ inc.incident_id }}</td>
+                  <td class="small" style="color: var(--text-secondary);">{{ inc.location.zone.name|default:"Unassigned" }}</td>
+                </tr>
+                {% endfor %}
+                {% for mov in movements %}
+                <tr>
+                  <td style="color: var(--text-primary);">{{ mov.recorded_at|date:"Y-m-d H:i" }}</td>
+                  <td><span class="badge bg-secondary text-white">Movement Record</span></td>
+                  <td class="small" style="color: var(--text-secondary);">Tag: {{ mov.bustard.tag_id }}</td>
+                  <td class="font-monospace small" style="color: var(--text-primary);">{{ mov.latitude|floatformat:4 }}, {{ mov.longitude|floatformat:4 }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="bb-empty-state py-3">
+            <i class="bi bi-eye-slash"></i>
+            <h6>No observation or movement records for this period.</h6>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  function initMovementMap() {
+    const mapDiv = document.getElementById("migration-map");
+    if (!mapDiv) return;
+
+    if (typeof google === "undefined" || !google.maps) {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (typeof google !== "undefined" && google.maps) {
+          clearInterval(interval);
+          renderMovementMap();
+        } else if (attempts > 30) {
+          clearInterval(interval);
+        }
+      }, 100);
+      return;
+    }
+
+    renderMovementMap();
+
+    function renderMovementMap() {
+      const map = new google.maps.Map(mapDiv, {
+        center: { lat: 17.8228, lng: 75.8458 },
+        zoom: 11,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        streetViewControl: false
+      });
+
+      const infoWindow = new google.maps.InfoWindow();
+
+      fetch("/api/map-data/")
+        .then(r => r.json())
+        .then(data => {
+          // Verified Field Sightings
+          (data.incidents || []).forEach(inc => {
+            if (inc.category && inc.category.toLowerCase().includes("sighting")) {
+              const marker = new google.maps.Marker({
+                position: { lat: inc.latitude, lng: inc.longitude },
+                map: map,
+                title: inc.incident_id,
+                icon: {
+                  path: google.maps.SymbolPath.CIRCLE,
+                  radius: 8,
+                  fillColor: "#43a047",
+                  fillOpacity: 0.85,
+                  strokeColor: "#2e7d32",
+                  strokeWeight: 1.5,
+                  scale: 7
+                }
+              });
+
+              marker.addListener("click", () => {
+                infoWindow.setContent(`<b>${inc.incident_id}</b><br>${inc.category}<br><small>${inc.reported_at}</small>`);
+                infoWindow.open(map, marker);
+              });
+            }
+          });
+        })
+        .catch(err => console.error("Map data load error:", err));
+    }
+  }
+
+  initMovementMap();
+});
+</script>
+{% endblock %}

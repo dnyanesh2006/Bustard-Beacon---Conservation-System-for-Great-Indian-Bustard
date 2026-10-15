@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ranger Field Mode — BUSTARD BEACON{% endblock %}
+
+{% block content %}
+<div class="field-container my-3">
+  <!-- Top Ranger Field Banner -->
+  <div class="bb-card p-3 mb-3 text-center">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <span class="badge bg-warning text-dark font-monospace fw-bold"><i class="bi bi-phone-fill"></i> RANGER FIELD MODE</span>
+      <span class="small" style="color: var(--text-secondary);"><i class="bi bi-person-badge"></i> Badge: {{ user_profile.badge_number|default:"RNG-NNJ" }}</span>
+    </div>
+    <h4 class="brand-font mb-1" style="color: var(--text-primary);">{{ user.get_full_name|default:user.username }}</h4>
+    <div id="gps-status-indicator" class="gps-status-pill gps-seeking mt-2">
+      <i class="bi bi-arrow-repeat spin"></i> Acquiring Live GPS Signal...
+    </div>
+  </div>
+
+  <!-- Big Quick Action Field Buttons -->
+  <a href="{% url 'report_incident' %}" class="btn btn-field-action btn-field-sighting">
+    <i class="bi bi-file-earmark-plus-fill"></i>
+    <div>
+      <div>REPORT SIGHTING</div>
+      <div style="font-size:0.75rem; font-weight:normal; opacity:0.85;">Submit a field report or observation</div>
+    </div>
+  </a>
+
+  <div class="row g-2 mb-3">
+    <div class="col-6">
+      <a href="{% url 'ranger_assignments' %}" class="btn btn-bb-forest w-100 py-3 text-center shadow-sm">
+        <i class="bi bi-card-checklist fs-4 d-block mb-1"></i>
+        <span class="fw-bold">My Tasks</span>
+        {% if pending_tasks_count > 0 %}
+          <span class="badge bg-danger ms-1">{{ pending_tasks_count }}</span>
+        {% endif %}
+      </a>
+    </div>
+    <div class="col-6">
+      <a href="{% url 'live_map' %}" class="btn btn-bb-sand w-100 py-3 text-center shadow-sm">
+        <i class="bi bi-geo-alt-fill fs-4 d-block mb-1"></i>
+        <span class="fw-bold">Live Map</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- My Reported Incidents Link -->
+  <div class="text-center mt-3 mb-3">
+    <a href="{% url 'ranger_incidents' %}" class="btn btn-bb-yellow-black fw-bold w-100 py-2 shadow-sm">
+      <i class="bi bi-clock-history me-2"></i> View Previously Submitted Reports
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Force dark mode for field operations to save battery
+  document.documentElement.setAttribute('data-theme', 'dark');
+</script>
+<script src="{% static 'js/field_mode.js' %}"></script>
+{% endblock %}

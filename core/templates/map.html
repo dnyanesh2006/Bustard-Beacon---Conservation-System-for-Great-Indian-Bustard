@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sanctuary Map & GIS Spatial Zoning — BUSTARD BEACON{% endblock %}
+
+{% block extra_head %}
+<style>
+  #conservation-map {
+    height: calc(100vh - 130px);
+    min-height: 580px;
+    width: 100%;
+    border-radius: 12px;
+    position: relative;
+    z-index: 1;
+  }
+  @media (max-width: 767.98px) {
+    #conservation-map {
+      height: 420px;
+      min-height: 380px;
+    }
+  }
+  .bb-map-sidebar {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  }
+  .bb-sidebar-heading {
+    color: #111815 !important;
+    font-weight: 800;
+    font-size: 1.25rem;
+    letter-spacing: -0.3px;
+  }
+  .bb-sidebar-subtext {
+    color: #4b5563 !important;
+    font-size: 0.85rem;
+    line-height: 1.45;
+  }
+  .bb-section-box {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .bb-section-box-title {
+    color: #111815 !important;
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .bb-zone-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .bb-zone-item:hover {
+    border-color: #f59e0b;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+  }
+  .bb-zone-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+  .bb-priority-pill {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .bb-priority-critical {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+  .bb-priority-high {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+  }
+  .bb-priority-medium {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+  }
+  .bb-priority-low {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+  .bb-scrollable-sidebar {
+    max-height: calc(100vh - 150px);
+    overflow-y: auto;
+  }
+  @media (max-width: 991.98px) {
+    .bb-scrollable-sidebar {
+      max-height: none;
+      overflow-y: visible;
+    }
+  }
+  /* Fallback alert styling inside map container */
+  #map-fallback-alert {
+    display: none;
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: 90%;
+    max-width: 500px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-3">
+  <div class="row g-3">
+    <!-- Main Map Container -->
+    <div class="col-lg-9 col-md-8">
+      <div class="bb-card p-2 position-relative">
+        <!-- Graceful Fallback Alert (Shown if tile service fails) -->
+        <div id="map-fallback-alert" class="alert alert-warning alert-dismissible fade show shadow-sm" role="alert">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <strong>Offline Tile Notice:</strong> External map tiles could not be loaded. Vector sanctuary zones and incident coordinates remain plotted on the grid.
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
+        <div id="conservation-map"></div>
+      </div>
+    </div>
+
+    <!-- Map Info & Legend Sidebar -->
+    <div class="col-lg-3 col-md-4">
+      <div class="bb-map-sidebar p-3 h-100 bb-scrollable-sidebar d-flex flex-column justify-content-between">
+        <div>
+          <!-- Clean High-Contrast Heading -->
+          <div class="mb-3">
+            <h4 class="bb-sidebar-heading mb-1">
+              <i class="bi bi-compass text-warning me-2"></i>Sanctuary Map GIS
+            </h4>
+            <div class="bb-sidebar-subtext">
+              Nannaj / Solapur Great Indian Bustard Sanctuary &bull; Centurion Spatial Engine
+            </div>
+          </div>
+
+          <!-- Section 1: Official Conservation & Sanctuary Zones -->
+          <div class="bb-section-box">
+            <div class="bb-section-box-title">
+              <i class="bi bi-bounding-box text-success"></i> Conservation Zones ({{ zones_data|length }})
+            </div>
+            <p class="small text-secondary mb-2" style="font-size: 0.76rem; line-height: 1.35;">
+              Actual habitat management sectors defined in the sanctuary registry. Click to locate on map.
+            </p>
+
+            {% if zones_data %}
+              <div class="d-flex flex-column">
+                {% for item in zones_data %}
+                  <div class="bb-zone-item" onclick="zoomToZone({{ item.zone.id }})" title="Click to zoom to {{ item.zone.name }}">
+                    <span class="bb-zone-dot" style="background-color: {{ item.zone.color_hex|default:'#2e7d32' }};"></span>
+                    <div class="flex-grow-1" style="min-width: 0;">
+                      <div class="fw-bold text-dark" style="font-size: 0.84rem; line-height: 1.25;">{{ item.zone.name }}</div>
+                      <div class="small text-secondary" style="font-size: 0.74rem; line-height: 1.25; margin-top: 2px;">
+                        <span class="font-monospace fw-semibold">{{ item.zone.code }}</span> &bull; {{ item.zone.get_zone_type_display }}
+                      </div>
+                    </div>
+                    <span class="badge rounded-pill bg-light text-dark border align-self-start font-monospace ms-1" style="font-size: 0.7rem;">
+                      {{ item.incident_count }}
+                    </span>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="p-2 text-center text-muted small bg-white rounded border">
+                No active sanctuary zones registered.
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Section 2: Incident Severity (Distinct from Zones) -->
+          <div class="bb-section-box">
+            <div class="bb-section-box-title">
+              <i class="bi bi-exclamation-triangle text-danger"></i> Incident Severity ({{ total_incidents }})
+            </div>
+            <p class="small text-secondary mb-2" style="font-size: 0.76rem; line-height: 1.35;">
+              Field signal severity classification for monitored incidents.
+            </p>
+
+            <div class="bb-priority-pill bb-priority-critical">
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-danger">CRITICAL</span>
+                <span class="small">Immediate Emergency</span>
+              </div>
+              <span class="font-monospace fw-bold">{{ priority_counts.CRITICAL|default:0 }}</span>
+            </div>
+
+            <div class="bb-priority-pill bb-priority-high">
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-warning text-dark">HIGH</span>
+                <span class="small">Rapid Response Required</span>
+              </div>
+              <span class="font-monospace fw-bold">{{ priority_counts.HIGH|default:0 }}</span>
+            </div>
+
+            <div class="bb-priority-pill bb-priority-medium">
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary">MEDIUM</span>
+                <span class="small">Patrol Monitoring</span>
+              </div>
+              <span class="font-monospace fw-bold">{{ priority_counts.MEDIUM|default:0 }}</span>
+            </div>
+
+            <div class="bb-priority-pill bb-priority-low">
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-success">LOW</span>
+                <span class="small">Routine Observation</span>
+              </div>
+              <span class="font-monospace fw-bold">{{ priority_counts.LOW|default:0 }}</span>
+            </div>
+          </div>
+
+          <!-- Section 3: Location Privacy Security Level -->
+          <div class="bb-section-box mb-2">
+            <div class="bb-section-box-title">
+              <i class="bi bi-shield-check text-primary"></i> Data Security Level
+            </div>
+            {% if user.is_authenticated %}
+              <div class="p-2 rounded bg-success bg-opacity-10 border border-success-subtle text-success small fw-semibold">
+                <i class="bi bi-unlock-fill me-1"></i> Staff Access (Precise Operational GPS)
+              </div>
+            {% else %}
+              <div class="p-2 rounded bg-secondary bg-opacity-10 border border-secondary-subtle text-secondary small fw-semibold">
+                <i class="bi bi-lock-fill me-1"></i> Public Access (Generalized Protection Grid)
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Action Controls -->
+        <div class="mt-3 d-flex flex-column gap-2">
+          <button type="button" class="btn btn-outline-dark btn-sm w-100 fw-semibold" onclick="resetSanctuaryMapView()">
+            <i class="bi bi-arrows-angle-expand me-1"></i> Reset View
+          </button>
+          <button type="button" class="btn btn-bb-sand btn-sm w-100 fw-bold shadow-sm" onclick="location.reload();">
+            <i class="bi bi-arrow-clockwise me-1"></i> Refresh GIS Data
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/map.js' %}"></script>
+{% endblock %}

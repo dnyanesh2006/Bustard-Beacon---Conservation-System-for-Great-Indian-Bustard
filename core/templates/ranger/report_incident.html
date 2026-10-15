@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Report Incident — Ranger Field Mode{% endblock %}
+
+{% block content %}
+<div class="field-container my-3">
+  <div class="bb-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4 class="brand-font mb-0" style="color: var(--text-primary);"><i class="bi bi-file-earmark-plus-fill text-warning me-2"></i> {% if edit_incident %}Update Incident Report{% else %}Field Report Submission{% endif %}</h4>
+      <a href="{% url 'ranger_field_mode' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg"></i> Cancel</a>
+    </div>
+
+    <form method="POST" action="{% url 'report_incident' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% if edit_incident %}
+        <input type="hidden" name="incident_id" value="{{ edit_incident.id }}">
+      {% endif %}
+
+      <!-- Hidden GPS inputs -->
+      <input type="hidden" name="latitude" id="field-latitude">
+      <input type="hidden" name="longitude" id="field-longitude">
+      <input type="hidden" name="accuracy" id="field-accuracy">
+
+      <!-- Category Select -->
+      <div class="mb-3">
+        <label class="form-label small fw-bold" style="color: var(--text-secondary);">Incident Category</label>
+        <select name="category" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <option value="BIRD_SIGHTING" {% if category_preset == 'BIRD_SIGHTING' %}selected{% endif %}>Great Indian Bustard Sighting</option>
+          <option value="INJURED_BIRD" {% if category_preset == 'INJURED_BIRD' %}selected{% endif %}>Injured Bustard / Wildlife (CRITICAL)</option>
+          <option value="SICK_BIRD" {% if category_preset == 'SICK_BIRD' %}selected{% endif %}>Sick / Weak Bustard (HIGH)</option>
+          <option value="POACHING_THREAT" {% if category_preset == 'POACHING_THREAT' %}selected{% endif %}>Poaching / Illegal Hunting Threat</option>
+          <option value="POWERLINE_COLLISION" {% if category_preset == 'POWERLINE_COLLISION' %}selected{% endif %}>High-Tension Power Line Collision Risk</option>
+          <option value="SUSPICIOUS_ACTIVITY" {% if category_preset == 'SUSPICIOUS_ACTIVITY' %}selected{% endif %}>Suspicious Human Intrusion</option>
+          <option value="OTHER" {% if category_preset == 'OTHER' %}selected{% endif %}>Others</option>
+        </select>
+      </div>
+
+
+
+      <!-- Bird ID Select (Hidden by default, shown for medical alerts) -->
+      <div class="mb-3" id="bird-id-container" style="display: none;">
+        <label class="form-label small fw-bold" style="color: var(--text-secondary);">Identified Bird ID</label>
+        <input type="text" name="bird_id" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Enter Bird ID (e.g., MED-2026-B3F)">
+        <div class="form-text small" style="color: var(--text-muted);">Enter if you can positively identify the bird. Leave blank for Unknown Bird.</div>
+      </div>
+
+      <!-- Custom Report Type Input (Hidden by default) -->
+      <div class="mb-3" id="custom-type-container" style="display: none;">
+        <label class="form-label small fw-bold" style="color: var(--text-secondary);">Action / Report Type</label>
+        <input type="text" name="custom_category" id="custom-category-input" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Specify action or report type">
+      </div>
+
+      <!-- Medical Alert Container (Hidden by default) -->
+      <div class="mb-3 p-3 rounded border border-danger" id="medical-alert-container" style="display: none; background-color: rgba(220, 53, 69, 0.1);">
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" id="send_medical_alert" name="send_medical_alert" value="true">
+          <label class="form-check-label fw-bold text-danger" for="send_medical_alert">Medical Treatment Required</label>
+        </div>
+        <div id="medical-team-selection" style="display: none;">
+          <label class="form-label small fw-bold mt-2" style="color: var(--text-secondary);">Select Available Medical Team</label>
+          <div class="list-group list-group-flush">
+            {% for team in medical_teams %}
+              {% if team.availability_status == 'AVAILABLE' %}
+                <label class="list-group-item" style="background-color: var(--bg-secondary); color: var(--text-primary); border-color: var(--border-color);">
+                  <input class="form-check-input me-2" type="radio" name="medical_team_id" value="{{ team.user.id }}">
+                  <i class="bi bi-circle-fill text-success small me-1"></i> {{ team.user.get_full_name|default:team.user.username }} - Available
+                </label>
+              {% elif team.availability_status == 'BUSY' %}
+                <label class="list-group-item text-muted" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
+                  <input class="form-check-input me-2" type="radio" disabled>
+                  <i class="bi bi-circle-fill text-danger small me-1"></i> {{ team.user.get_full_name|default:team.user.username }} - Busy
+                </label>
+              {% else %}
+                <label class="list-group-item text-muted" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
+                  <input class="form-check-input me-2" type="radio" disabled>
+                  <i class="bi bi-circle-fill text-secondary small me-1"></i> {{ team.user.get_full_name|default:team.user.username }} - Offline
+                </label>
+              {% endif %}
+            {% empty %}
+              <div class="small text-muted">No medical teams found in system.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Location Map & GPS -->
+      <div class="mb-3 p-3 rounded border border-secondary" style="background-color: var(--bg-tertiary);">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <label class="form-label text-warning small fw-bold mb-0"><i class="bi bi-geo-alt-fill"></i> Location Selection</label>
+          <button type="button" id="btn-acquire-gps" class="btn btn-outline-warning btn-sm py-0 px-2"><i class="bi bi-arrow-clockwise"></i> Use My GPS</button>
+        </div>
+        
+        <div id="incident-map" style="height: 250px; width: 100%; border-radius: 8px; background-color: #222;" class="mb-2 border border-secondary"></div>
+        
+        <div id="gps-coords-display" class="small font-monospace" style="color: var(--text-secondary);">
+          Tap map to select location, or use GPS.
+        </div>
+        <div id="gps-error-display" class="text-danger small mt-1" style="display:none;"></div>
+      </div>
+
+      <!-- Real HTML5 Camera & Upload Photo Options -->
+      <div class="mb-3">
+        <label class="form-label small fw-bold" style="color: var(--text-secondary);"><i class="bi bi-image me-1"></i> Attach Photo</label>
+        
+        <div class="d-flex gap-2 mb-2">
+          <button type="button" class="btn btn-outline-secondary flex-grow-1" id="btn-start-camera" onclick="startLiveCamera()">
+            <i class="bi bi-camera-fill me-1"></i> Capture from Camera
+          </button>
+          <label class="btn btn-outline-secondary flex-grow-1">
+            <i class="bi bi-upload me-1"></i> Upload Image(s)
+            <input type="file" name="photo_upload" id="photo_upload_input" accept="image/*" multiple style="display: none;" onchange="handleMultiplePhotoPreview(this)">
+          </label>
+        </div>
+        
+        <!-- Live Camera Stream UI -->
+        <div id="live-camera-container" class="mt-2" style="display:none;">
+          <video id="live-camera-video" style="width: 100%; border-radius: 8px; background-color: #000;" autoplay playsinline></video>
+          <div class="d-flex justify-content-between mt-2">
+            <button type="button" class="btn btn-danger btn-sm" onclick="stopLiveCamera()">Cancel</button>
+            <button type="button" class="btn btn-success btn-sm" onclick="captureCameraFrame()">Capture Photo</button>
+          </div>
+          <div id="camera-error-msg" class="text-danger small mt-1" style="display:none;"></div>
+        </div>
+
+        <div class="form-text small" style="color: var(--text-muted);">Supports live device camera capture or direct file upload (JPEG, PNG, WEBP; max 10 MB).</div>
+        
+        <!-- Hidden input to store captured image data URL -->
+        <input type="hidden" name="captured_image_data" id="captured_image_data">
+        <canvas id="camera-canvas" style="display:none;"></canvas>
+
+        <!-- Live Image Preview Container -->
+        <div id="camera-preview-container" class="mt-2 p-3 bg-light border border-secondary rounded d-flex flex-wrap gap-2" style="display:none;">
+          <!-- Previews injected here -->
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger mt-2" id="camera-retake-btn" onclick="clearPhotoPreview()" style="display:none;">Remove All Photos</button>
+      </div>
+
+      <!-- Incident Description -->
+      <div class="mb-4">
+        <label class="form-label small fw-bold" style="color: var(--text-secondary);">Field Description & Details</label>
+        <textarea name="description" rows="3" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Provide observation details, bird count, physical condition, behavior..." required>{% if edit_incident %}{{ edit_incident.description }}{% endif %}</textarea>
+      </div>
+
+      <button type="submit" class="btn btn-bb-sand w-100 py-3 fw-bold"><i class="bi bi-send-fill me-2"></i> {% if edit_incident %}UPDATE INCIDENT REPORT{% else %}SUBMIT INCIDENT REPORT{% endif %}</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Force dark mode for field operations to save battery
+  document.documentElement.setAttribute('data-theme', 'dark');
+</script>
+<script src="{% static 'js/field_mode.js' %}"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+      const categorySelect = document.querySelector('select[name="category"]');
+      const customTypeContainer = document.getElementById('custom-type-container');
+      const customCategoryInput = document.getElementById('custom-category-input');
+      const medicalAlertContainer = document.getElementById('medical-alert-container');
+      const sendMedicalAlertCb = document.getElementById('send_medical_alert');
+      const medicalTeamSelection = document.getElementById('medical-team-selection');
+      const birdIdContainer = document.getElementById('bird-id-container');
+      
+      function toggleUI() {
+          const val = categorySelect.value;
+
+          // Custom category
+          if (val === 'OTHER') {
+              customTypeContainer.style.display = 'block';
+              customCategoryInput.required = true;
+          } else {
+              customTypeContainer.style.display = 'none';
+              customCategoryInput.required = false;
+          }
+
+          // Medical Alert UI
+          if (val === 'INJURED_BIRD' || val === 'SICK_BIRD') {
+              medicalAlertContainer.style.display = 'block';
+              birdIdContainer.style.display = 'block';
+          } else {
+              medicalAlertContainer.style.display = 'none';
+              birdIdContainer.style.display = 'none';
+              sendMedicalAlertCb.checked = false;
+              medicalTeamSelection.style.display = 'none';
+              document.querySelectorAll('input[name="medical_team_id"]').forEach(el => el.checked = false);
+          }
+      }
+      
+      sendMedicalAlertCb.addEventListener('change', function() {
+          medicalTeamSelection.style.display = this.checked ? 'block' : 'none';
+          if (!this.checked) {
+              document.querySelectorAll('input[name="medical_team_id"]').forEach(el => el.checked = false);
+          }
+      });
+      
+      categorySelect.addEventListener('change', toggleUI);
+      toggleUI(); // Initial check
+  });
+</script>
+
+{% if google_maps_api_key %}
+<script>
+  (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
+    key: "{{ google_maps_api_key }}",
+    v: "weekly",
+  });
+</script>
+<script>
+  let map;
+  let marker;
+
+  async function initMap() {
+    const { Map } = await google.maps.importLibrary("maps");
+    const { Marker } = await google.maps.importLibrary("marker");
+    
+    // Default center (Solapur area)
+    const initialLocation = { lat: 17.6599, lng: 75.9064 };
+
+    map = new Map(document.getElementById("incident-map"), {
+      zoom: 12,
+      center: initialLocation,
+      mapTypeId: 'satellite',
+      disableDefaultUI: true,
+      zoomControl: true,
+    });
+
+    marker = new Marker({
+      map: map,
+      draggable: true,
+    });
+
+    // Handle map click
+    map.addListener("click", (e) => {
+      placeMarkerAndSave(e.latLng);
+    });
+
+    // Handle marker drag
+    marker.addListener("dragend", (e) => {
+      placeMarkerAndSave(e.latLng);
+    });
+    
+    // Check if we have existing coords from GPS auto-fetch
+    const latInput = document.getElementById("field-latitude");
+    const lngInput = document.getElementById("field-longitude");
+    if (latInput.value && lngInput.value) {
+        const pos = { lat: parseFloat(latInput.value), lng: parseFloat(lngInput.value) };
+        marker.setPosition(pos);
+        map.setCenter(pos);
+    }
+  }
+  
+  function placeMarkerAndSave(latLng) {
+      marker.setPosition(latLng);
+      const lat = latLng.lat();
+      const lng = latLng.lng();
+      
+      document.getElementById("field-latitude").value = lat;
+      document.getElementById("field-longitude").value = lng;
+      
+      const displayCoords = document.getElementById("gps-coords-display");
+      if (displayCoords) {
+          displayCoords.innerHTML = `<strong>Lat:</strong> ${lat.toFixed(5)}, <strong>Lng:</strong> ${lng.toFixed(5)} <span class="badge bg-secondary ms-2">Manual Selection</span>`;
+      }
+  }
+
+  // Intercept the default GPS function to update map
+  const originalAcquire = acquireCurrentGPSLocation;
+  acquireCurrentGPSLocation = function() {
+      originalAcquire();
+      
+      // We need to wait a moment for the original function to populate the inputs
+      setTimeout(() => {
+          const latInput = document.getElementById("field-latitude");
+          const lngInput = document.getElementById("field-longitude");
+          if (latInput.value && lngInput.value && marker && map) {
+              const pos = { lat: parseFloat(latInput.value), lng: parseFloat(lngInput.value) };
+              marker.setPosition(pos);
+              map.setCenter(pos);
+              map.setZoom(15);
+          }
+      }, 2000);
+  };
+
+  document.addEventListener("DOMContentLoaded", function() {
+      initMap();
+  });
+</script>
+{% else %}
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+      const mapDiv = document.getElementById("incident-map");
+      if(mapDiv) mapDiv.innerHTML = '<div class="alert alert-warning h-100 d-flex justify-content-center align-items-center mb-0"><small>Map API not configured. Use GPS button.</small></div>';
+  });
+</script>
+{% endif %}
+
+{% endblock %}

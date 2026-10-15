@@ -1,0 +1,553 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Report Center — BUSTARD BEACON{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4" style="max-width: 1400px;">
+  <!-- Header Banner -->
+  <div class="bb-card p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge bg-warning text-dark fw-bold px-2 py-1">ADMINISTRATIVE ACCESS</span>
+          <span class="text-secondary small font-monospace">System Control Center</span>
+        </div>
+        <h3 class="brand-font mb-1" style="color: var(--text-primary);">
+          <i class="bi bi-file-earmark-pdf text-warning me-2"></i> Conservation Report Generation Center
+        </h3>
+        <p class="small mb-0" style="color: var(--text-secondary);">
+          Official role-segregated reporting hub. Export verified field records, officer operations, medical treatments, researcher submissions, and audit trails.
+        </p>
+      </div>
+      <div>
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary btn-sm fw-bold">
+          <i class="bi bi-arrow-left me-1"></i> Admin Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 Cards Per Row Layout -->
+  <div class="row g-4">
+
+    <!-- ROW 1, CARD A: RANGER REPORTS (CONSOLIDATED) -->
+    <div class="col-lg-6">
+      <div class="bb-card p-4 h-100 d-flex flex-column border-start border-warning border-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <span class="badge bg-warning text-dark fw-bold mb-2">CATEGORY 1</span>
+            <h5 class="brand-font mb-1" style="color: var(--text-primary);">
+              <i class="bi bi-shield-check text-warning me-2"></i> Consolidated Ranger Reports
+            </h5>
+            <div class="small" style="color: var(--text-secondary);">
+              Aggregated incident reports and sightings submitted by all field rangers.
+            </div>
+          </div>
+          <span class="badge bg-secondary font-monospace">{{ ranger_total_count }} Records</span>
+        </div>
+
+        <p class="text-muted small mb-3">
+          Merges all ranger submissions into a single unified report. Clearly identifies reporting ranger identity, badge number, incident ID, status, and timestamp.
+        </p>
+
+        <!-- Date Filter Form -->
+        <form method="GET" action="{% url 'report_center' %}" class="p-3 rounded mb-3 border border-secondary" style="background-color: var(--bg-secondary);">
+          <input type="hidden" name="section" value="ranger">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-5">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Start Date</label>
+              <input type="date" name="ranger_date_from" value="{{ ranger_date_from }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-5">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">End Date</label>
+              <input type="date" name="ranger_date_to" value="{{ ranger_date_to }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+              <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold" title="Apply Date Filter">
+                <i class="bi bi-funnel"></i>
+              </button>
+              <a href="{% url 'report_center' %}" class="btn btn-outline-secondary btn-sm" title="Reset Filter">
+                <i class="bi bi-arrow-counterclockwise"></i>
+              </a>
+            </div>
+          </div>
+        </form>
+
+        <!-- Data Preview Table -->
+        <div class="table-responsive flex-grow-1 mb-3">
+          <table class="table table-bb table-hover align-middle mb-0" style="font-size: 0.82rem;">
+            <thead>
+              <tr>
+                <th>Incident ID</th>
+                <th>Category</th>
+                <th>Reported By (Ranger)</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inc in ranger_incidents %}
+              <tr>
+                <td class="font-monospace text-warning fw-bold">{{ inc.incident_id }}</td>
+                <td style="color: var(--text-primary);">{{ inc.get_category_display|truncatechars:24 }}</td>
+                <td style="color: var(--text-primary);">
+                  <b>{{ inc.reporter.get_full_name|default:inc.reporter.username }}</b>
+                  {% if inc.reporter.profile.badge_number %}<span class="text-secondary small">({{ inc.reporter.profile.badge_number }})</span>{% endif %}
+                </td>
+                <td>
+                  {% if inc.status == 'VERIFIED' %}<span class="badge bg-success">VERIFIED</span>
+                  {% elif inc.status == 'PENDING' %}<span class="badge bg-warning text-dark">PENDING</span>
+                  {% else %}<span class="badge bg-secondary">{{ inc.status }}</span>{% endif %}
+                </td>
+                <td class="small font-monospace" style="color: var(--text-secondary);">{{ inc.reported_at|date:"Y-m-d" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="text-center py-4 text-muted">
+                  <i class="bi bi-inbox fs-3 d-block mb-1"></i>
+                  No ranger field reports found for this date range.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Download Action -->
+        <div class="mt-auto pt-2 border-top border-secondary">
+          <form method="GET" action="{% url 'download_pdf_report' %}">
+            <input type="hidden" name="type" value="FIELD_PATROL_INCIDENT_REPORT">
+            <input type="hidden" name="date_from" value="{{ ranger_date_from }}">
+            <input type="hidden" name="date_to" value="{{ ranger_date_to }}">
+            <button type="submit" class="btn btn-warning w-100 fw-bold">
+              <i class="bi bi-download me-1"></i> Download Consolidated Ranger PDF
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 1, CARD B: FOREST OFFICER REPORT -->
+    <div class="col-lg-6">
+      <div class="bb-card p-4 h-100 d-flex flex-column border-start border-info border-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <span class="badge bg-info text-dark fw-bold mb-2">CATEGORY 2</span>
+            <h5 class="brand-font mb-1" style="color: var(--text-primary);">
+              <i class="bi bi-file-earmark-bar-graph text-info me-2"></i> Forest Officer Operational Report
+            </h5>
+            <div class="small" style="color: var(--text-secondary);">
+              Operational summary of command center activities, verifications, and patrols.
+            </div>
+          </div>
+          <span class="badge bg-secondary font-monospace">{{ fo_metrics.total_incidents }} Incidents</span>
+        </div>
+
+        <p class="text-muted small mb-3">
+          Synthesizes verified incident management, task delegation to field rangers, and high-priority response actions recorded in the command center database.
+        </p>
+
+        <!-- Date Filter Form -->
+        <form method="GET" action="{% url 'report_center' %}" class="p-3 rounded mb-3 border border-secondary" style="background-color: var(--bg-secondary);">
+          <input type="hidden" name="section" value="officer">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-5">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Start Date</label>
+              <input type="date" name="officer_date_from" value="{{ fo_date_from }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-5">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">End Date</label>
+              <input type="date" name="officer_date_to" value="{{ fo_date_to }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+              <button type="submit" class="btn btn-info text-dark btn-sm w-100 fw-bold" title="Apply Date Filter">
+                <i class="bi bi-funnel"></i>
+              </button>
+              <a href="{% url 'report_center' %}" class="btn btn-outline-secondary btn-sm" title="Reset Filter">
+                <i class="bi bi-arrow-counterclockwise"></i>
+              </a>
+            </div>
+          </div>
+        </form>
+
+        <!-- Metrics Grid Preview -->
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <div class="p-2 rounded border border-secondary text-center h-100 d-flex flex-column justify-content-center" style="background-color: var(--bg-secondary);">
+              <h4 class="text-success fw-bold mb-0">{{ fo_metrics.resolved_incidents }}</h4>
+              <div class="small fw-semibold" style="color: var(--text-secondary);">Verified & Resolved</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 rounded border border-secondary text-center h-100 d-flex flex-column justify-content-center" style="background-color: var(--bg-secondary);">
+              <h4 class="text-warning fw-bold mb-0">{{ fo_metrics.pending_incidents }}</h4>
+              <div class="small fw-semibold" style="color: var(--text-secondary);">Pending Review</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 rounded border border-secondary text-center h-100 d-flex flex-column justify-content-center" style="background-color: var(--bg-secondary);">
+              <h4 class="text-danger fw-bold mb-0">{{ fo_metrics.critical_incidents }}</h4>
+              <div class="small fw-semibold" style="color: var(--text-secondary);">Critical Threats</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 rounded border border-secondary text-center h-100 d-flex flex-column justify-content-center" style="background-color: var(--bg-secondary);">
+              <h4 class="text-info fw-bold mb-0">{{ fo_metrics.patrols_count }}</h4>
+              <div class="small fw-semibold" style="color: var(--text-secondary);">Patrols Dispatched</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Operational Records Table -->
+        <div class="table-responsive flex-grow-1 mb-3">
+          <table class="table table-bb table-hover align-middle mb-0" style="font-size: 0.82rem;">
+            <thead>
+              <tr>
+                <th>Incident ID</th>
+                <th>Category / Details</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Officer Verification</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inc in fo_operational_incidents %}
+              <tr>
+                <td class="font-monospace text-info fw-bold">{{ inc.incident_id }}</td>
+                <td style="color: var(--text-primary);">
+                  <b>{{ inc.get_category_display|truncatechars:20 }}</b>
+                  {% if inc.description %}<div class="text-muted small">{{ inc.description|truncatechars:28 }}</div>{% endif %}
+                </td>
+                <td>
+                  {% if inc.priority == 'CRITICAL' %}<span class="badge bg-danger">CRITICAL</span>
+                  {% elif inc.priority == 'HIGH' %}<span class="badge bg-warning text-dark">HIGH</span>
+                  {% else %}<span class="badge bg-secondary">{{ inc.priority }}</span>{% endif %}
+                </td>
+                <td>
+                  {% if inc.status == 'VERIFIED' %}<span class="badge bg-success">VERIFIED</span>
+                  {% elif inc.status == 'PENDING' %}<span class="badge bg-warning text-dark">PENDING</span>
+                  {% else %}<span class="badge bg-secondary">{{ inc.status }}</span>{% endif %}
+                </td>
+                <td style="color: var(--text-primary);">
+                  {% if inc.verified_by %}
+                    <b>{{ inc.verified_by.get_full_name|default:inc.verified_by.username }}</b>
+                  {% else %}
+                    <span class="text-muted small">Pending Officer</span>
+                  {% endif %}
+                </td>
+                <td class="small font-monospace" style="color: var(--text-secondary);">{{ inc.reported_at|date:"Y-m-d" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" class="text-center py-4 text-muted">
+                  <i class="bi bi-inbox fs-3 d-block mb-1"></i>
+                  No officer operational records found for this date range.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Download Action -->
+        <div class="mt-auto pt-2 border-top border-secondary">
+          <form method="GET" action="{% url 'download_pdf_report' %}">
+            <input type="hidden" name="type" value="OFFICER_OPERATIONAL_SUMMARY">
+            <input type="hidden" name="date_from" value="{{ fo_date_from }}">
+            <input type="hidden" name="date_to" value="{{ fo_date_to }}">
+            <button type="submit" class="btn btn-outline-info w-100 fw-bold">
+              <i class="bi bi-download me-1"></i> Download Officer Operations PDF
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 2, CARD C: MEDICAL TEAM REPORTS -->
+    <div class="col-lg-6">
+      <div class="bb-card p-4 h-100 d-flex flex-column border-start border-danger border-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <span class="badge bg-danger fw-bold mb-2">CATEGORY 3</span>
+            <h5 class="brand-font mb-1" style="color: var(--text-primary);">
+              <i class="bi bi-heart-pulse text-danger me-2"></i> Medical Team Reports
+            </h5>
+            <div class="small" style="color: var(--text-secondary);">
+              Veterinary clinical cases, ICU treatments, and rehabilitation progress.
+            </div>
+          </div>
+          <span class="badge bg-secondary font-monospace">{{ medical_total_count }} Cases</span>
+        </div>
+
+        <p class="text-muted small mb-3">
+          Overview of avian medical interventions across all veterinary rescue teams, including diagnostic causes, stage transfers, and recovery statistics.
+        </p>
+
+        <!-- Date & Status Filter Form -->
+        <form method="GET" action="{% url 'report_center' %}" class="p-3 rounded mb-3 border border-secondary" style="background-color: var(--bg-secondary);">
+          <input type="hidden" name="section" value="medical">
+          <div class="row g-2 align-items-end mb-2">
+            <div class="col-12">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Case Category</label>
+              <select name="medical_sub_category" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+                <option value="ALL" {% if medical_sub_category == 'ALL' %}selected{% endif %}>All Medical Cases</option>
+                <option value="ACTIVE" {% if medical_sub_category == 'ACTIVE' %}selected{% endif %}>Active Cases</option>
+                <option value="ICU" {% if medical_sub_category == 'ICU' %}selected{% endif %}>ICU Intensive Care</option>
+                <option value="RECOVERED" {% if medical_sub_category == 'RECOVERED' %}selected{% endif %}>Recovered & Pre-Release</option>
+                <option value="DEATH" {% if medical_sub_category == 'DEATH' %}selected{% endif %}>Deceased Bird Records</option>
+              </select>
+            </div>
+          </div>
+          <div class="row g-2 align-items-end">
+            <div class="col-md-5">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Start Date</label>
+              <input type="date" name="medical_date_from" value="{{ medical_date_from }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-5">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">End Date</label>
+              <input type="date" name="medical_date_to" value="{{ medical_date_to }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+              <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold" title="Apply Filter">
+                <i class="bi bi-funnel"></i>
+              </button>
+              <a href="{% url 'report_center' %}" class="btn btn-outline-secondary btn-sm" title="Reset Filter">
+                <i class="bi bi-arrow-counterclockwise"></i>
+              </a>
+            </div>
+          </div>
+        </form>
+
+        <!-- Preview Table -->
+        <div class="table-responsive flex-grow-1 mb-3">
+          <table class="table table-bb table-hover align-middle mb-0" style="font-size: 0.82rem;">
+            <thead>
+              <tr>
+                <th>Case ID</th>
+                <th>Bird Tag</th>
+                <th>Rehab Stage</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in medical_cases %}
+              <tr>
+                <td class="font-monospace text-danger fw-bold">{{ c.case_id }}</td>
+                <td>{{ c.bustard.tag_id|default:"Unregistered" }}</td>
+                <td><span class="badge bg-secondary">{{ c.get_rehabilitation_stage_display|truncatechars:18 }}</span></td>
+                <td><span class="badge bg-warning text-dark">{{ c.get_status_display }}</span></td>
+                <td class="small font-monospace" style="color: var(--text-secondary);">{{ c.created_at|date:"Y-m-d" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="text-center py-4 text-muted">
+                  <i class="bi bi-heart-pulse fs-3 d-block mb-1"></i>
+                  No veterinary medical cases found for this filter.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Download Action -->
+        <div class="mt-auto pt-2 border-top border-secondary">
+          <form method="GET" action="{% url 'download_pdf_report' %}">
+            <input type="hidden" name="type" value="MEDICAL_RESCUE_REPORT">
+            <input type="hidden" name="sub_category" value="{{ medical_sub_category }}">
+            <input type="hidden" name="date_from" value="{{ medical_date_from }}">
+            <input type="hidden" name="date_to" value="{{ medical_date_to }}">
+            <button type="submit" class="btn btn-outline-danger w-100 fw-bold">
+              <i class="bi bi-download me-1"></i> Download Medical Operations PDF
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 2, CARD D: RESEARCHER REPORTS -->
+    <div class="col-lg-6">
+      <div class="bb-card p-4 h-100 d-flex flex-column border-start border-success border-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <span class="badge bg-success fw-bold mb-2">CATEGORY 4</span>
+            <h5 class="brand-font mb-1" style="color: var(--text-primary);">
+              <i class="bi bi-lightbulb text-success me-2"></i> Submitted Researcher Reports
+            </h5>
+            <div class="small" style="color: var(--text-secondary);">
+              Monthly conservation and habitat analysis reports submitted by researchers.
+            </div>
+          </div>
+          <span class="badge bg-secondary font-monospace">{{ research_reports|length }} Submissions</span>
+        </div>
+
+        <p class="text-muted small mb-3">
+          Official analytical reports finalized and formally dispatched by wildlife researchers directly to the System Administrator.
+        </p>
+
+        <!-- Date Filter Form -->
+        <form method="GET" action="{% url 'report_center' %}" class="p-3 rounded mb-3 border border-secondary" style="background-color: var(--bg-secondary);">
+          <input type="hidden" name="section" value="research">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-5">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Start Date</label>
+              <input type="date" name="research_date_from" value="{{ research_date_from }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-5">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">End Date</label>
+              <input type="date" name="research_date_to" value="{{ research_date_to }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+              <button type="submit" class="btn btn-success btn-sm w-100 fw-bold" title="Apply Filter">
+                <i class="bi bi-funnel"></i>
+              </button>
+              <a href="{% url 'report_center' %}" class="btn btn-outline-secondary btn-sm" title="Reset Filter">
+                <i class="bi bi-arrow-counterclockwise"></i>
+              </a>
+            </div>
+          </div>
+        </form>
+
+        <!-- Submitted Reports Table -->
+        <div class="table-responsive flex-grow-1 mb-3">
+          <table class="table table-bb table-hover align-middle mb-0" style="font-size: 0.82rem;">
+            <thead>
+              <tr>
+                <th>Report Period</th>
+                <th>Researcher</th>
+                <th>Submission Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for report in research_reports %}
+              <tr>
+                <td style="color: var(--text-primary);">
+                  <b>{{ report.period_start|date:"Y-m-d" }}</b> to <b>{{ report.period_end|date:"Y-m-d" }}</b>
+                </td>
+                <td style="color: var(--text-primary);">
+                  {{ report.generated_by.get_full_name|default:report.generated_by.username }}
+                </td>
+                <td class="small font-monospace" style="color: var(--text-secondary);">
+                  {{ report.submitted_at_admin|date:"M d, Y H:i"|default:report.created_at|date:"M d, Y" }}
+                </td>
+                <td>
+                  <a href="{% url 'download_pdf_report' %}?type=CONSERVATION_ANALYSIS_REPORT&report_id={{ report.id }}&active_role=ADMIN" target="_blank" class="btn btn-sm btn-outline-success py-1 px-2 fw-bold" title="View Submitted Analysis">
+                    <i class="bi bi-eye"></i> View
+                  </a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center py-4 text-muted">
+                  <i class="bi bi-file-earmark-x fs-3 d-block mb-1"></i>
+                  No submitted research reports found for this period.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-auto pt-2 border-top border-secondary text-muted small text-center">
+          <i class="bi bi-info-circle me-1"></i> Researcher reports are authored in the Wildlife Research Portal.
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 3: SYSTEM AUDIT & COMPLIANCE REPORT (FULL WIDTH) -->
+    <div class="col-12">
+      <div class="bb-card p-4 h-100 d-flex flex-column border-start border-secondary border-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <span class="badge bg-secondary fw-bold mb-2">CATEGORY 5</span>
+            <h5 class="brand-font mb-1" style="color: var(--text-primary);">
+              <i class="bi bi-shield-lock text-warning me-2"></i> System Audit & Compliance Report
+            </h5>
+            <div class="small" style="color: var(--text-secondary);">
+              Immutable forensic activity logs, RBAC assignments, and verifications.
+            </div>
+          </div>
+          <span class="badge bg-secondary font-monospace">{{ audit_logs_count }} Entries</span>
+        </div>
+
+        <p class="text-muted small mb-3">
+          Preserved administrative compliance report. Records user authentications, incident status overrides, veterinary updates, and report generation events.
+        </p>
+
+        <!-- Date Filter Form -->
+        <form method="GET" action="{% url 'report_center' %}" class="p-3 rounded mb-3 border border-secondary" style="background-color: var(--bg-secondary);">
+          <input type="hidden" name="section" value="audit">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-5">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Start Date</label>
+              <input type="date" name="audit_date_from" value="{{ audit_date_from }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-5">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">End Date</label>
+              <input type="date" name="audit_date_to" value="{{ audit_date_to }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+              <button type="submit" class="btn btn-outline-warning btn-sm w-100 fw-bold" title="Apply Filter">
+                <i class="bi bi-funnel"></i>
+              </button>
+              <a href="{% url 'report_center' %}" class="btn btn-outline-secondary btn-sm" title="Reset Filter">
+                <i class="bi bi-arrow-counterclockwise"></i>
+              </a>
+            </div>
+          </div>
+        </form>
+
+        <!-- Recent Logs Preview -->
+        <div class="table-responsive flex-grow-1 mb-3">
+          <table class="table table-bb table-hover align-middle mb-0" style="font-size: 0.82rem;">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>User</th>
+                <th>Action</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in audit_recent_logs %}
+              <tr>
+                <td class="small font-monospace" style="color: var(--text-secondary);">{{ log.timestamp|date:"Y-m-d H:i" }}</td>
+                <td style="color: var(--text-primary);"><b>{{ log.user_display|default:log.user.username }}</b></td>
+                <td><span class="badge bg-secondary">{{ log.action }}</span></td>
+                <td class="small" style="color: var(--text-secondary);">{{ log.description|truncatechars:45 }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center py-4 text-muted">
+                  <i class="bi bi-journal-x fs-3 d-block mb-1"></i>
+                  No audit log records found for this period.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Download & Full Trail Actions -->
+        <div class="mt-auto pt-2 border-top border-secondary d-flex gap-2">
+          <form method="GET" action="{% url 'download_pdf_report' %}" class="flex-grow-1">
+            <input type="hidden" name="type" value="SYSTEM_AUDIT_REPORT">
+            <input type="hidden" name="date_from" value="{{ audit_date_from }}">
+            <input type="hidden" name="date_to" value="{{ audit_date_to }}">
+            <button type="submit" class="btn btn-outline-warning w-100 fw-bold">
+              <i class="bi bi-download me-1"></i> Download Audit PDF
+            </button>
+          </form>
+          <a href="{% url 'admin_audit_logs' %}" class="btn btn-outline-secondary fw-bold text-nowrap">
+            Full Audit Logs &rarr;
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

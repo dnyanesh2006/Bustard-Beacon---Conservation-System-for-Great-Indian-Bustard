@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+
+{% block title %}Veterinary Medical Rescue Dashboard — BUSTARD BEACON{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+  <!-- Top KPI Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="bb-card p-3 d-flex align-items-center justify-content-between" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#activeCasesModal">
+        <div>
+          <h3 class="text-warning fw-bold mb-0">{{ active_cases_count }}</h3>
+          <div class="text-secondary small fw-semibold">ACTIVE MEDICAL CASES</div>
+        </div>
+        <i class="bi bi-heart-pulse-fill fs-1 text-warning opacity-50"></i>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="bb-card p-3 d-flex align-items-center justify-content-between" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#icuCasesModal">
+        <div>
+          <h3 class="text-danger fw-bold mb-0">{{ icu_cases_count }}</h3>
+          <div class="text-secondary small fw-semibold">ICU INTENSIVE PATIENTS</div>
+        </div>
+        <i class="bi bi-activity fs-1 text-danger opacity-50"></i>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="bb-card p-3 d-flex align-items-center justify-content-between" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#recoveredCasesModal">
+        <div>
+          <h3 class="text-success fw-bold mb-0">{{ recovered_count }}</h3>
+          <div class="text-secondary small fw-semibold">RECOVERED CASES</div>
+        </div>
+        <i class="bi bi-check2-circle fs-1 text-success opacity-50"></i>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="bb-card p-3 d-flex align-items-center justify-content-between" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#deathCasesModal">
+        <div>
+          <h3 class="text-secondary fw-bold mb-0">{{ death_count }}</h3>
+          <div class="text-secondary small fw-semibold">DEATH RECORDS</div>
+        </div>
+        <i class="bi bi-x-circle fs-1 text-secondary opacity-50"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Active Cases Table -->
+    <div class="col-lg-8">
+      <div class="bb-card p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="brand-font mb-0" style="color: var(--text-primary);"><i class="bi bi-hospital-fill text-warning me-2"></i> Active Veterinary Rescue Queue</h5>
+          <div class="d-flex gap-2">
+            <a href="{% url 'report_center' %}" class="btn btn-outline-danger btn-sm fw-bold"><i class="bi bi-file-earmark-pdf me-1"></i> Medical Reports</a>
+            <a href="{% url 'medical_cases' %}" class="btn btn-outline-warning btn-sm">All Medical Cases &rarr;</a>
+          </div>
+        </div>
+
+        {% if active_cases %}
+          <div class="table-responsive">
+            <table class="table table-bb table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Case ID</th>
+                  <th>Condition Summary</th>
+                  <th>Rehab Stage</th>
+                  <th>Status</th>
+                  <th>Created At</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for case in active_cases %}
+                  <tr>
+                    <td class="font-monospace text-warning fw-bold">{{ case.case_id }}</td>
+                    <td style="color: var(--text-primary);">{{ case.condition_summary }}</td>
+                    <td><span class="badge bg-danger">{{ case.get_rehabilitation_stage_display }}</span></td>
+                    <td><span class="badge bg-warning text-dark">{{ case.get_status_display }}</span></td>
+                    <td class="small" style="color: var(--text-primary);">{{ case.created_at|date:"M d, H:i" }}</td>
+                    <td>
+                      <a href="{% url 'medical_case_detail' case.id %}" class="btn btn-bb-sand btn-sm py-1 px-2"><i class="bi bi-bandaid"></i> Clinical View</a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="bb-empty-state">
+            <i class="bi bi-heart-pulse"></i>
+            <h6>No active veterinary medical cases recorded yet.</h6>
+            <p class="small text-muted mb-0">Emergency medical cases created from critical injured bird reports will appear here.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Equipment Inventory Quick Summary & Availability -->
+    <div class="col-lg-4">
+      <div class="bb-card p-4 mb-4">
+        <h5 class="text-info brand-font mb-3"><i class="bi bi-person-lines-fill me-2"></i> My Availability Status</h5>
+        <form method="POST" action="{% url 'medical_dashboard' %}">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="update_availability">
+          <div class="mb-3">
+            <select name="availability_status" class="form-select border-info" style="background-color: var(--bg-secondary); color: var(--text-primary);" onchange="this.form.submit()">
+              <option value="AVAILABLE" {% if request.user.profile.availability_status == 'AVAILABLE' %}selected{% endif %}>🟢 Available for Dispatch</option>
+              <option value="BUSY" {% if request.user.profile.availability_status == 'BUSY' %}selected{% endif %}>🟠 Busy / In Surgery</option>
+              <option value="OFFLINE" {% if request.user.profile.availability_status == 'OFFLINE' %}selected{% endif %}>🔴 Offline / Off-Duty</option>
+            </select>
+          </div>
+          <div class="small text-muted">Update your status so Forest Officers know if you can accept new critical cases.</div>
+        </form>
+      </div>
+
+      <div class="bb-card p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="brand-font mb-0" style="color: var(--text-primary);"><i class="bi bi-box-seam text-info me-2"></i> Veterinary Inventory</h5>
+          <a href="{% url 'medical_equipment' %}" class="btn btn-outline-info btn-sm">Manage &rarr;</a>
+        </div>
+
+        {% if equipment %}
+          <div class="list-group list-group-flush rounded border border-secondary" style="background-color: var(--bg-tertiary);">
+            {% for eq in equipment %}
+              <div class="list-group-item border-secondary d-flex justify-content-between align-items-center" style="background-color: var(--bg-tertiary); color: var(--text-primary);">
+                <div>
+                  <div class="fw-bold small">{{ eq.name }}</div>
+                  <div class="style-small" style="font-size:0.75rem; color: var(--text-secondary);">{{ eq.category }}</div>
+                </div>
+                <span class="badge bg-success rounded-pill">{{ eq.quantity_available }} units</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="bb-empty-state">
+            <i class="bi bi-box"></i>
+            <h6>No equipment registered.</h6>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modals for Dashboard Summary Cards -->
+<!-- 1. Active Cases Modal -->
+<div class="modal fade" id="activeCasesModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" style="color: var(--text-primary);"><i class="bi bi-heart-pulse-fill text-warning me-2"></i> Active Medical Cases</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter);"></button>
+      </div>
+      <div class="modal-body p-0">
+        {% if all_active_cases %}
+        <div class="table-responsive">
+          <table class="table table-bb table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="ps-3">Case ID</th>
+                <th>Condition Summary</th>
+                <th>Rehab Stage</th>
+                <th>Bird</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for case in all_active_cases %}
+              <tr>
+                <td class="ps-3 font-monospace text-warning fw-bold">{{ case.case_id }}</td>
+                <td style="color: var(--text-primary);">{{ case.condition_summary }}</td>
+                <td><span class="badge bg-secondary">{{ case.get_rehabilitation_stage_display }}</span></td>
+                <td class="small" style="color: var(--text-primary);">{{ case.bustard.tag_id|default:"Unknown" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+          <i class="bi bi-heart-pulse fs-1"></i>
+          <h6 class="mt-3">No Active Cases</h6>
+          <p class="small mb-0">There are currently no active medical cases.</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. ICU Cases Modal -->
+<div class="modal fade" id="icuCasesModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" style="color: var(--text-primary);"><i class="bi bi-activity text-danger me-2"></i> ICU Intensive Patients</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter);"></button>
+      </div>
+      <div class="modal-body p-0">
+        {% if icu_cases %}
+        <div class="table-responsive">
+          <table class="table table-bb table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="ps-3">Case ID</th>
+                <th>Diagnosis / Condition</th>
+                <th>Status</th>
+                <th>Bird</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for case in icu_cases %}
+              <tr>
+                <td class="ps-3 font-monospace text-danger fw-bold">{{ case.case_id }}</td>
+                <td style="color: var(--text-primary);">{{ case.diagnosis|default:case.condition_summary }}</td>
+                <td><span class="badge bg-warning text-dark">{{ case.get_status_display }}</span></td>
+                <td class="small" style="color: var(--text-primary);">{{ case.bustard.tag_id|default:"Unknown" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+          <i class="bi bi-activity fs-1"></i>
+          <h6 class="mt-3">No ICU Patients</h6>
+          <p class="small mb-0">There are currently no patients in the ICU.</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Recovered Cases Modal -->
+<div class="modal fade" id="recoveredCasesModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" style="color: var(--text-primary);"><i class="bi bi-check2-circle text-success me-2"></i> Recovered Cases</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter);"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="p-2 border-bottom border-secondary small text-muted text-center" style="background-color: var(--bg-tertiary);">
+          Note: This list shows patients that have recovered and are fit for release or already released.
+        </div>
+        {% if recovered_cases %}
+        <div class="table-responsive">
+          <table class="table table-bb table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="ps-3">Case ID</th>
+                <th>Final Diagnosis / Remarks</th>
+                <th>Status</th>
+                <th>Bird</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for case in recovered_cases %}
+              <tr>
+                <td class="ps-3 font-monospace text-success fw-bold"><a href="{% url 'medical_case_detail' case.id %}" class="text-success text-decoration-none">{{ case.case_id }}</a></td>
+                <td style="color: var(--text-primary);">{{ case.diagnosis|default:case.condition_summary }}</td>
+                <td><span class="badge bg-success text-dark">{{ case.get_status_display }}</span></td>
+                <td class="small" style="color: var(--text-primary);">{{ case.bustard.tag_id|default:"Unknown" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+          <i class="bi bi-check2-circle fs-1"></i>
+          <h6 class="mt-3">No Recovered Patients</h6>
+          <p class="small mb-0">There are currently no recovered patients.</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. Death Records Modal -->
+<div class="modal fade" id="deathCasesModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-secondary" style="background-color: var(--bg-primary);">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" style="color: var(--text-primary);"><i class="bi bi-x-circle text-secondary me-2"></i> Death Records</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter);"></button>
+      </div>
+      <div class="modal-body p-0">
+        {% if death_cases %}
+        <div class="table-responsive">
+          <table class="table table-bb table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th class="ps-3">Case ID</th>
+                <th>Final Remarks / Cause of Death</th>
+                <th>Rehab Stage</th>
+                <th>Bird</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for case in death_cases %}
+              <tr>
+                <td class="ps-3 font-monospace text-secondary fw-bold"><a href="{% url 'medical_case_detail' case.id %}" class="text-secondary text-decoration-none">{{ case.case_id }}</a></td>
+                <td style="color: var(--text-primary);">{{ case.diagnosis|default:"No remarks" }}</td>
+                <td><span class="badge bg-secondary">{{ case.get_rehabilitation_stage_display }}</span></td>
+                <td class="small" style="color: var(--text-primary);">{{ case.bustard.tag_id|default:"Unknown" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+          <i class="bi bi-x-circle fs-1"></i>
+          <h6 class="mt-3">No Death Records</h6>
+          <p class="small mb-0">There are currently no patients marked as deceased.</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

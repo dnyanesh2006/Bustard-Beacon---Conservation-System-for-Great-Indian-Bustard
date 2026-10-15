@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block title %}My Patrol Assignments — Ranger Portal{% endblock %}
+
+{% block content %}
+<div class="container my-4" data-theme="light">
+  <div class="bb-card p-4" style="background-color: #ffffff; border: 1px solid #dee2e6; color: #212529;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h4 class="brand-font mb-0" style="color: #212529;"><i class="bi bi-card-checklist text-warning me-2"></i> My Patrol & Field Assignments</h4>
+        <div class="small text-muted">Tasks dispatched by Forest Officers</div>
+      </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <style>
+      .ranger-tasks-tabs {
+        border-bottom: 2px solid #ffeeba;
+      }
+      .ranger-tasks-tabs .nav-link {
+        background-color: #f8f9fa;
+        color: #6c757d !important;
+        border: 1px solid #dee2e6;
+        border-bottom: none;
+        margin-right: 5px;
+        border-radius: 6px 6px 0 0;
+        padding: 10px 20px;
+        transition: all 0.2s ease-in-out;
+      }
+      .ranger-tasks-tabs .nav-link:hover {
+        background-color: #e9ecef;
+      }
+      .ranger-tasks-tabs .nav-link.active {
+        background-color: #fff3cd;
+        color: #856404 !important;
+        border-color: #ffeeba;
+        border-bottom-color: transparent;
+      }
+    </style>
+    <ul class="nav nav-tabs mb-4 ranger-tasks-tabs" id="assignmentTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active fw-bold" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab" aria-controls="pending" aria-selected="true">Pending Tasks</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link fw-bold" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab" aria-controls="completed" aria-selected="false">Completed Tasks</button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="assignmentTabsContent">
+      <!-- Pending Tasks Tab -->
+      <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab">
+        {% if pending_assignments %}
+          <div class="row g-4">
+            {% for task in pending_assignments %}
+              <div class="col-md-6">
+                <div class="p-4 rounded border h-100 d-flex flex-column justify-content-between" style="background-color: #f8f9fa; border-color: #dee2e6;">
+                  <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <b class="text-warning font-monospace fs-5">{{ task.incident.incident_id }}</b>
+                      <span class="badge {% if task.status == 'IN_PROGRESS' %}bg-info text-dark{% else %}bg-warning text-dark{% endif %} px-2 py-1">
+                        {{ task.get_status_display }}
+                      </span>
+                    </div>
+                    <h5 class="brand-font mb-2" style="color: #212529;">{{ task.incident.get_category_display }}</h5>
+                    
+                    <div class="card mb-3 border-0 shadow-sm">
+                      <div class="card-header py-2 px-3 small fw-bold bg-light text-dark border-bottom"><i class="bi bi-info-circle text-primary me-1"></i> Officer Instructions</div>
+                      <div class="card-body py-3 px-3 bg-white">
+                        <p class="mb-0 text-dark" style="font-size: 0.95rem;">{{ task.instructions }}</p>
+                      </div>
+                    </div>
+                    <div class="text-muted small mb-3"><i class="bi bi-clock me-1"></i> Assigned: {{ task.assigned_at|date:"Y-m-d H:i" }} by {{ task.assigned_by.username }}</div>
+                  </div>
+
+                  <form method="POST" action="{% url 'ranger_assignments' %}" enctype="multipart/form-data" class="mt-3 pt-3 border-top" style="border-color: #dee2e6 !important;">
+                    {% csrf_token %}
+                    <input type="hidden" name="assignment_id" value="{{ task.id }}">
+                    
+                    <div class="mb-3">
+                      <label class="form-label small fw-bold" style="color: #495057;">Update Task Status</label>
+                      <select name="status" class="form-select bg-white text-dark" style="border-color: #ced4da;">
+                        <option value="PENDING" {% if task.status == 'PENDING' %}selected{% endif %}>Pending</option>
+                        <option value="IN_PROGRESS" {% if task.status == 'IN_PROGRESS' %}selected{% endif %}>Patrol In Progress</option>
+                        <option value="COMPLETED">Complete</option>
+                      </select>
+                    </div>
+
+                    <div class="mb-3">
+                      <label class="form-label small fw-bold" style="color: #495057;">Field Notes</label>
+                      <input type="text" name="ranger_notes" value="{{ task.ranger_notes }}" class="form-control bg-white text-dark" style="border-color: #ced4da;" placeholder="Add ranger field notes...">
+                    </div>
+
+                    <div class="mb-4">
+                      <label class="form-label small fw-bold" style="color: #495057;">Supporting Evidence (Optional)</label>
+                      <input type="file" name="evidence_files" class="form-control bg-white text-dark" style="border-color: #ced4da;" multiple>
+                      <div class="form-text small text-muted">Upload field photographs or relevant documents if requested.</div>
+                    </div>
+                    
+                    {% if "Information Request" in task.instructions %}
+                      <a href="{% url 'report_incident' %}?incident_id={{ task.incident.id }}" class="btn btn-warning w-100 fw-bold py-2 shadow-sm mb-2"><i class="bi bi-pencil-square"></i> Respond to Request (Update Sighting)</a>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm">Save Task Update</button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center py-5 rounded border bg-light" style="border-color: #dee2e6;">
+            <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+            <h6 class="mt-3 text-dark fw-bold">No pending patrol assignments.</h6>
+            <p class="small text-muted mb-0">Assignments dispatched by Forest Officers will appear here.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Completed Tasks Tab -->
+      <div class="tab-pane fade" id="completed" role="tabpanel" aria-labelledby="completed-tab">
+        {% if completed_assignments %}
+          <div class="row g-4">
+            {% for task in completed_assignments %}
+              <div class="col-md-6">
+                <div class="p-4 rounded border h-100 d-flex flex-column justify-content-between" style="background-color: #f8f9fa; border-color: #dee2e6;">
+                  <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <b class="text-secondary font-monospace fs-5">{{ task.incident.incident_id }}</b>
+                      <span class="badge bg-success px-2 py-1"><i class="bi bi-check2-all me-1"></i> Completed</span>
+                    </div>
+                    <h5 class="brand-font mb-2 text-muted">{{ task.incident.get_category_display }}</h5>
+                    
+                    <div class="card mb-3 border-0 shadow-sm">
+                      <div class="card-header py-2 px-3 small fw-bold bg-light text-muted border-bottom"><i class="bi bi-info-circle me-1"></i> Officer Instructions</div>
+                      <div class="card-body py-3 px-3 bg-white">
+                        <p class="mb-0 text-muted" style="font-size: 0.95rem;">{{ task.instructions }}</p>
+                      </div>
+                    </div>
+                    <div class="text-muted small mb-2"><i class="bi bi-clock me-1"></i> Assigned: {{ task.assigned_at|date:"Y-m-d H:i" }} by {{ task.assigned_by.username }}</div>
+                    <div class="text-muted small fw-bold"><i class="bi bi-check-circle me-1"></i> Completed: {{ task.completed_at|date:"Y-m-d H:i" }}</div>
+                  </div>
+
+                  {% if task.attachments.all %}
+                  <div class="mt-4 pt-3 border-top" style="border-color: #dee2e6 !important;">
+                    <label class="form-label text-dark small mb-2 fw-bold">Uploaded Evidence:</label>
+                    <div class="d-flex flex-wrap gap-2">
+                      {% for attachment in task.attachments.all %}
+                        {% if attachment.is_image %}
+                          <a href="{{ attachment.file.url }}" target="_blank">
+                            <img src="{{ attachment.file.url }}" alt="Evidence" class="img-thumbnail bg-white border zoomable-img" style="height: 70px; width: 70px; object-fit: cover; border-color: #dee2e6;">
+                          </a>
+                        {% else %}
+                          <a href="{{ attachment.file.url }}" target="_blank" class="btn btn-sm btn-outline-secondary d-flex align-items-center" style="height: 70px;">
+                            <i class="bi bi-file-earmark-text fs-4 me-2"></i>
+                            <span class="small text-truncate" style="max-width: 100px;">{{ attachment.file.name|slice:"-10:" }}</span>
+                          </a>
+                        {% endif %}
+                      {% endfor %}
+                    </div>
+                  </div>
+                  {% endif %}
+                  
+                  {% if task.ranger_notes %}
+                  <div class="mt-3">
+                    <label class="form-label text-dark small fw-bold mb-1">Ranger Notes:</label>
+                    <p class="text-muted small bg-white p-2 rounded border" style="border-color: #dee2e6;">{{ task.ranger_notes }}</p>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center py-5 rounded border bg-light" style="border-color: #dee2e6;">
+            <i class="bi bi-inbox text-secondary" style="font-size: 3rem;"></i>
+            <h6 class="mt-3 text-dark fw-bold">No completed tasks yet.</h6>
+            <p class="small text-muted mb-0">Tasks you mark as Complete will appear here.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

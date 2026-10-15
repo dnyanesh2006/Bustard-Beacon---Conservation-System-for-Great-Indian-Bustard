@@ -1,0 +1,441 @@
+{% extends 'base.html' %}
+
+{% block title %}Forest Officer Reports Center — BUSTARD BEACON{% endblock %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 1100px;">
+  <!-- Header Banner -->
+  <div class="bb-card p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge bg-warning text-dark fw-bold px-2 py-1">COMMAND CENTER</span>
+          <span class="text-secondary small font-monospace">Authorized Officer Reporting Hub</span>
+        </div>
+        <h3 class="brand-font mb-1" style="color: var(--text-primary);">
+          <i class="bi bi-file-earmark-pdf text-warning me-2"></i> Forest Officer Reporting Center
+        </h3>
+        <p class="small mb-0" style="color: var(--text-secondary);">
+          Review personal command operations, monitor consolidated ranger field reports, and inspect research submissions.
+        </p>
+      </div>
+      <div>
+        <a href="{% url 'officer_dashboard' %}" class="btn btn-outline-secondary btn-sm fw-bold">
+          <i class="bi bi-arrow-left me-1"></i> Command Center
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXACTLY THREE TABS -->
+  <div class="bb-card p-4">
+    <ul class="nav nav-tabs border-secondary mb-4" id="officerReportTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'operational' %}active{% endif %}" id="tab-fo-ops" data-bs-toggle="tab" data-bs-target="#tab-content-ops" type="button" role="tab" style="color: var(--text-primary);">
+          <i class="bi bi-person-badge me-2 text-warning"></i> 1. My Operational Report
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'rangers' %}active{% endif %}" id="tab-fo-rangers" data-bs-toggle="tab" data-bs-target="#tab-content-rangers" type="button" role="tab" style="color: var(--text-primary);">
+          <i class="bi bi-shield-check me-2 text-info"></i> 2. Ranger Reports
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'research' %}active{% endif %}" id="tab-fo-research" data-bs-toggle="tab" data-bs-target="#tab-content-research" type="button" role="tab" style="color: var(--text-primary);">
+          <i class="bi bi-lightbulb me-2 text-success"></i> 3. Researcher Reports
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="officerReportTabsContent">
+
+      <!-- ================================================================= -->
+      <!-- TAB 1: MY OPERATIONAL REPORT -->
+      <!-- ================================================================= -->
+      <div class="tab-pane fade {% if active_tab == 'operational' %}show active{% endif %}" id="tab-content-ops" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div>
+            <h5 class="brand-font mb-0" style="color: var(--text-primary);">
+              <i class="bi bi-speedometer2 text-warning me-2"></i> My Operational Activities Report
+            </h5>
+            <div class="small" style="color: var(--text-secondary);">
+              Operational command actions, verified incidents, and patrol task assignments executed by <b>{{ user.get_full_name|default:user.username }}</b>.
+            </div>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <span class="badge bg-secondary font-monospace">{{ fo_metrics.total_managed }} Managed</span>
+            <span class="badge bg-secondary font-monospace">{{ verified_count }} Verified</span>
+            <span class="badge bg-secondary font-monospace">{{ dispatched_count }} Tasks</span>
+          </div>
+        </div>
+
+        <!-- Date Filter & Actions (Single Horizontal Row on Desktop) -->
+        <form method="GET" action="{% url 'report_center' %}" class="p-3 rounded mb-4 border border-secondary" style="background-color: var(--bg-secondary);">
+          <input type="hidden" name="tab" value="operational">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Start Date</label>
+              <input type="date" name="officer_date_from" value="{{ officer_date_from }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">End Date</label>
+              <input type="date" name="officer_date_to" value="{{ officer_date_to }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-6 d-flex align-items-center gap-2 flex-wrap flex-md-nowrap">
+              <button type="submit" class="btn btn-warning btn-sm fw-bold text-nowrap px-3">
+                <i class="bi bi-funnel"></i> Apply Filter
+              </button>
+              <a href="{% url 'report_center' %}?tab=operational" class="btn btn-outline-secondary btn-sm fw-bold text-nowrap px-3">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset
+              </a>
+              <button type="submit" formaction="{% url 'download_pdf_report' %}" name="type" value="OFFICER_OPERATIONAL_SUMMARY" class="btn btn-outline-warning btn-sm fw-bold text-nowrap px-3 ms-md-auto">
+                <i class="bi bi-download"></i> Download PDF
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Summary Metrics Cards -->
+        <div class="row g-2 mb-4">
+          <div class="col-6 col-md-3">
+            <div class="p-3 rounded border border-secondary text-center h-100" style="background-color: var(--bg-secondary);">
+              <h4 class="text-primary fw-bold mb-0">{{ fo_metrics.total_managed }}</h4>
+              <div class="small fw-semibold" style="color: var(--text-secondary);">Total Managed</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 rounded border border-secondary text-center h-100" style="background-color: var(--bg-secondary);">
+              <h4 class="text-success fw-bold mb-0">{{ fo_metrics.verified_count }}</h4>
+              <div class="small fw-semibold" style="color: var(--text-secondary);">Verified / Resolved</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 rounded border border-secondary text-center h-100" style="background-color: var(--bg-secondary);">
+              <h4 class="text-warning fw-bold mb-0">{{ fo_metrics.pending_count }}</h4>
+              <div class="small fw-semibold" style="color: var(--text-secondary);">Pending Review</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="p-3 rounded border border-secondary text-center h-100" style="background-color: var(--bg-secondary);">
+              <h4 class="text-danger fw-bold mb-0">{{ fo_metrics.critical_count }}</h4>
+              <div class="small fw-semibold" style="color: var(--text-secondary);">Critical Threats</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. Detailed Operational Incident Verification Records -->
+        <h6 class="small fw-bold text-uppercase mb-2" style="color: var(--text-secondary);">
+          <i class="bi bi-shield-check text-success me-1"></i> 1. Detailed Incident Management & Verification Records
+        </h6>
+        <div class="table-responsive mb-4">
+          <table class="table table-bb table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Incident ID</th>
+                <th>Category & Description</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Reporting Ranger</th>
+                <th>Zone / Location</th>
+                <th>Verification Notes</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inc in managed_incidents %}
+              <tr>
+                <td class="font-monospace text-warning fw-bold">{{ inc.incident_id }}</td>
+                <td style="color: var(--text-primary);">
+                  <b>{{ inc.get_category_display }}</b>
+                  {% if inc.description %}<div class="small text-muted">{{ inc.description|truncatechars:45 }}</div>{% endif %}
+                </td>
+                <td>
+                  {% if inc.priority == 'CRITICAL' %}<span class="badge bg-danger">CRITICAL</span>
+                  {% elif inc.priority == 'HIGH' %}<span class="badge bg-warning text-dark">HIGH</span>
+                  {% else %}<span class="badge bg-secondary">{{ inc.priority }}</span>{% endif %}
+                </td>
+                <td>
+                  {% if inc.status == 'VERIFIED' %}<span class="badge bg-success">VERIFIED</span>
+                  {% elif inc.status == 'PENDING' %}<span class="badge bg-warning text-dark">PENDING</span>
+                  {% else %}<span class="badge bg-secondary">{{ inc.status }}</span>{% endif %}
+                </td>
+                <td style="color: var(--text-primary);">
+                  <b>{{ inc.reporter.get_full_name|default:inc.reporter.username }}</b>
+                  {% if inc.reporter.profile.badge_number %}<span class="badge bg-secondary font-monospace ms-1">{{ inc.reporter.profile.badge_number }}</span>{% endif %}
+                </td>
+                <td class="small" style="color: var(--text-secondary);">{{ inc.location.zone.name|default:"Solapur Buffer" }}</td>
+                <td class="small" style="color: var(--text-secondary);">
+                  {{ inc.verification_notes|default:"—"|truncatechars:45 }}
+                </td>
+                <td class="small font-monospace" style="color: var(--text-secondary);">{{ inc.reported_at|date:"Y-m-d H:i" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="8" class="text-center py-4 text-muted">
+                  <i class="bi bi-inbox fs-3 d-block mb-1"></i>
+                  No managed or verified incidents found for this date range.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 2. Dispatched Patrol Assignments Table -->
+        <h6 class="small fw-bold text-uppercase mb-2" style="color: var(--text-secondary);">
+          <i class="bi bi-send-check text-info me-1"></i> 2. Dispatched Patrol Tasks & Delegations
+        </h6>
+        <div class="table-responsive mb-4">
+          <table class="table table-bb table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Incident Ref</th>
+                <th>Assigned Ranger</th>
+                <th>Task Status</th>
+                <th>Operational Instructions</th>
+                <th>Dispatched Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in dispatched_patrols %}
+              <tr>
+                <td class="font-monospace text-warning fw-bold">{{ p.incident.incident_id }}</td>
+                <td style="color: var(--text-primary);">
+                  <b>{{ p.assigned_ranger.get_full_name|default:p.assigned_ranger.username }}</b>
+                  {% if p.assigned_ranger.profile.badge_number %}<span class="badge bg-secondary font-monospace ms-1">{{ p.assigned_ranger.profile.badge_number }}</span>{% endif %}
+                </td>
+                <td><span class="badge bg-secondary">{{ p.get_status_display }}</span></td>
+                <td class="small" style="color: var(--text-secondary);">{{ p.instructions|truncatechars:60 }}</td>
+                <td class="small font-monospace" style="color: var(--text-secondary);">{{ p.assigned_at|date:"Y-m-d H:i" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="text-center py-3 text-muted">
+                  <i class="bi bi-person-check fs-4 d-block mb-1"></i>
+                  No patrol task delegations dispatched during this period.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 3. Officer Action Trail / Decision Log Table -->
+        <h6 class="small fw-bold text-uppercase mb-2" style="color: var(--text-secondary);">
+          <i class="bi bi-journal-text text-warning me-1"></i> 3. Command Action Trail & Operational Audit Log
+        </h6>
+        <div class="table-responsive mb-2">
+          <table class="table table-bb table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Action Type</th>
+                <th>Forensic Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in officer_logs %}
+              <tr>
+                <td class="small font-monospace" style="color: var(--text-secondary);">{{ log.timestamp|date:"Y-m-d H:i" }}</td>
+                <td><span class="badge bg-secondary">{{ log.action }}</span></td>
+                <td class="small" style="color: var(--text-primary);">{{ log.description }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="3" class="text-center py-3 text-muted">
+                  <i class="bi bi-journal-x fs-4 d-block mb-1"></i>
+                  No command actions logged during this period.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- TAB 2: RANGER REPORTS (CONSOLIDATED) -->
+      <!-- ================================================================= -->
+      <div class="tab-pane fade {% if active_tab == 'rangers' %}show active{% endif %}" id="tab-content-rangers" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div>
+            <h5 class="brand-font mb-0" style="color: var(--text-primary);">
+              <i class="bi bi-shield-check text-info me-2"></i> Consolidated Ranger Reports
+            </h5>
+            <div class="small" style="color: var(--text-secondary);">
+              Combined reports submitted by all rangers. Each entry clearly identifies the reporting ranger.
+            </div>
+          </div>
+          <span class="badge bg-secondary font-monospace">{{ ranger_total_count }} Total Reports</span>
+        </div>
+
+        <!-- Date Filter & Actions -->
+        <form method="GET" action="{% url 'report_center' %}" class="p-3 rounded mb-4 border border-secondary" style="background-color: var(--bg-secondary);">
+          <input type="hidden" name="tab" value="rangers">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Start Date</label>
+              <input type="date" name="ranger_date_from" value="{{ ranger_date_from }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">End Date</label>
+              <input type="date" name="ranger_date_to" value="{{ ranger_date_to }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-6 d-flex align-items-center gap-2 flex-wrap flex-md-nowrap">
+              <button type="submit" class="btn btn-info text-dark btn-sm fw-bold text-nowrap px-3">
+                <i class="bi bi-funnel"></i> Apply Filter
+              </button>
+              <a href="{% url 'report_center' %}?tab=rangers" class="btn btn-outline-secondary btn-sm fw-bold text-nowrap px-3">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset
+              </a>
+              <button type="submit" formaction="{% url 'download_pdf_report' %}" name="type" value="FIELD_PATROL_INCIDENT_REPORT" class="btn btn-warning btn-sm fw-bold text-nowrap px-3 ms-md-auto">
+                <i class="bi bi-download"></i> Download PDF
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Consolidated Ranger Reports Table -->
+        <div class="table-responsive">
+          <table class="table table-bb table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Incident ID</th>
+                <th>Category / Details</th>
+                <th>Reporting Ranger</th>
+                <th>Status</th>
+                <th>Submission Date</th>
+                <th>Zone / Location</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inc in ranger_incidents %}
+              <tr>
+                <td class="font-monospace text-warning fw-bold">{{ inc.incident_id }}</td>
+                <td>
+                  <b style="color: var(--text-primary);">{{ inc.get_category_display }}</b>
+                  {% if inc.description %}<div class="small text-muted">{{ inc.description|truncatechars:45 }}</div>{% endif %}
+                </td>
+                <td style="color: var(--text-primary);">
+                  <b>{{ inc.reporter.get_full_name|default:inc.reporter.username }}</b>
+                  {% if inc.reporter.profile.badge_number %}
+                    <span class="badge bg-secondary font-monospace ms-1">{{ inc.reporter.profile.badge_number }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if inc.status == 'VERIFIED' %}<span class="badge bg-success">VERIFIED</span>
+                  {% elif inc.status == 'PENDING' %}<span class="badge bg-warning text-dark">PENDING</span>
+                  {% else %}<span class="badge bg-secondary">{{ inc.status }}</span>{% endif %}
+                </td>
+                <td class="small font-monospace" style="color: var(--text-secondary);">{{ inc.reported_at|date:"Y-m-d H:i" }}</td>
+                <td class="small" style="color: var(--text-secondary);">
+                  {{ inc.location.zone.name|default:"Solapur Buffer" }}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" class="text-center py-4 text-muted">
+                  <i class="bi bi-shield-x fs-3 d-block mb-1"></i>
+                  No ranger field reports found matching this date range.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- TAB 3: RESEARCHER REPORTS -->
+      <!-- ================================================================= -->
+      <div class="tab-pane fade {% if active_tab == 'research' %}show active{% endif %}" id="tab-content-research" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div>
+            <h5 class="brand-font mb-0" style="color: var(--text-primary);">
+              <i class="bi bi-lightbulb text-success me-2"></i> Submitted Researcher Reports
+            </h5>
+            <div class="small" style="color: var(--text-secondary);">
+              Monthly conservation and population analysis reports submitted to Forest Officers by wildlife researchers.
+            </div>
+          </div>
+          <span class="badge bg-secondary font-monospace">{{ research_reports|length }} Submissions</span>
+        </div>
+
+        <!-- Date Filter & Actions -->
+        <form method="GET" action="{% url 'report_center' %}" class="p-3 rounded mb-4 border border-secondary" style="background-color: var(--bg-secondary);">
+          <input type="hidden" name="tab" value="research">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Start Date</label>
+              <input type="date" name="research_date_from" value="{{ research_date_from }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">End Date</label>
+              <input type="date" name="research_date_to" value="{{ research_date_to }}" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-primary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-6 d-flex align-items-center gap-2 flex-wrap flex-md-nowrap">
+              <button type="submit" class="btn btn-success btn-sm fw-bold text-nowrap px-3">
+                <i class="bi bi-funnel"></i> Apply Filter
+              </button>
+              <a href="{% url 'report_center' %}?tab=research" class="btn btn-outline-secondary btn-sm fw-bold text-nowrap px-3">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset
+              </a>
+            </div>
+          </div>
+        </form>
+
+        <!-- Researcher Submissions Table -->
+        <div class="table-responsive mb-3">
+          <table class="table table-bb table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Report Period</th>
+                <th>Submitting Researcher</th>
+                <th>Submission Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for report in research_reports %}
+              <tr>
+                <td style="color: var(--text-primary);">
+                  <b>{{ report.period_start|date:"Y-m-d" }}</b> to <b>{{ report.period_end|date:"Y-m-d" }}</b>
+                </td>
+                <td style="color: var(--text-primary);">
+                  <b>{{ report.generated_by.get_full_name|default:report.generated_by.username }}</b>
+                </td>
+                <td class="small font-monospace" style="color: var(--text-secondary);">
+                  {{ report.submitted_at_fo|date:"M d, Y H:i"|default:report.created_at|date:"M d, Y" }}
+                </td>
+                <td>
+                  <a href="{% url 'download_pdf_report' %}?type=CONSERVATION_ANALYSIS_REPORT&report_id={{ report.id }}&active_role=FOREST_OFFICER" target="_blank" class="btn btn-sm btn-outline-success py-1 px-3 fw-bold" title="Open Full Analysis Report">
+                    <i class="bi bi-eye me-1"></i> View Report
+                  </a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center py-5 text-muted">
+                  <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                  <h6>No submitted reports found for this period.</h6>
+                  <p class="small mb-0">When researchers submit monthly conservation reports to Forest Officers, they will appear here and in your Notifications.</p>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-3 rounded border border-secondary" style="background-color: var(--bg-secondary);">
+          <div class="small" style="color: var(--text-secondary);">
+            <i class="bi bi-bell-fill text-warning me-1"></i>
+            <b>Notification Integration:</b> When a researcher submits a new analysis report, an alert is automatically delivered to your Notifications panel with a direct <b>View</b> action.
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

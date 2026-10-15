@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications — BUSTARD BEACON{% endblock %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 900px;">
+  <div class="bb-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h4 class="brand-font mb-0" style="color: var(--text-primary);"><i class="bi bi-bell-fill text-warning me-2"></i> Notifications</h4>
+        <div class="text-secondary small">Conservation alerts, patrol assignments, and medical emergency notices</div>
+      </div>
+      {% if notifications %}
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="mark_all_read">
+        <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-check2-all me-1"></i> Mark All Read</button>
+      </form>
+      {% endif %}
+    </div>
+
+    {% if notifications %}
+      <div class="list-group list-group-flush rounded border border-secondary" style="background-color: var(--bg-secondary);">
+        {% for notif in notifications %}
+        <div class="list-group-item border-secondary d-flex justify-content-between align-items-center py-3 px-3 {% if not notif.is_read %}border-start border-warning border-4{% endif %}" style="background-color: transparent; flex-wrap: nowrap; gap: 1rem;">
+          <div style="flex: 1 1 auto; min-width: 0;">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              {% if notif.category == 'INCIDENT_ALERT' %}
+                <i class="bi bi-exclamation-triangle-fill text-danger flex-shrink-0"></i>
+              {% elif notif.category == 'PATROL_ASSIGNMENT' %}
+                <i class="bi bi-person-walking text-info flex-shrink-0"></i>
+              {% elif notif.category == 'MEDICAL_ALERT' %}
+                <i class="bi bi-heart-pulse-fill text-danger flex-shrink-0"></i>
+              {% else %}
+                <i class="bi bi-bell-fill text-warning flex-shrink-0"></i>
+              {% endif %}
+              <b style="color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ notif.title }}</b>
+              {% if not notif.is_read %}
+                <span class="badge bg-warning text-dark ms-1 flex-shrink-0" style="font-size:0.65rem;">NEW</span>
+              {% endif %}
+            </div>
+            <div class="mb-1" style="color: var(--text-primary); word-wrap: break-word;">{{ notif.message }}</div>
+            <div class="small fw-semibold" style="color: var(--text-secondary); font-size:0.75rem;">{{ notif.created_at|date:"Y-m-d H:i" }}</div>
+          </div>
+          <div style="flex: 0 0 auto;">
+            <form method="POST" class="m-0 p-0">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="mark_read">
+              <input type="hidden" name="notification_id" value="{{ notif.id }}">
+              <button type="submit" class="btn btn-warning btn-sm py-1 px-3 fw-bold text-dark text-nowrap" style="min-width: 90px;">
+                {% if notif.link_url %}
+                  <i class="bi bi-arrow-right-circle me-1"></i> View
+                {% else %}
+                  <i class="bi bi-check2 me-1"></i> Read
+                {% endif %}
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="bb-empty-state">
+        <i class="bi bi-bell-slash"></i>
+        <h6>No notifications at this time.</h6>
+        <p class="text-muted small mb-0">Conservation alerts, patrol assignments, and medical emergencies will appear here.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

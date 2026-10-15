@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+
+{% block title %}Forest Officer Operational Records — Admin Control Center{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+  <!-- Header & Back Navigation -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary btn-sm fw-bold">
+          <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+        </a>
+        <span class="badge bg-danger font-monospace fw-bold">{{ total_count }} Operational Incidents</span>
+        {% if filtered_count != total_count %}
+          <span class="badge bg-secondary font-monospace">{{ filtered_count }} Matching Filters</span>
+        {% endif %}
+      </div>
+      <h3 class="brand-font mb-0" style="color: var(--text-primary);">
+        <i class="bi bi-compass-fill text-danger me-2"></i> Forest Officer Operations & Managed Incidents
+      </h3>
+      <div class="small" style="color: var(--text-secondary);">
+        Complete read-only log of operational field alerts, verification decisions, command actions, and patrol assignments.
+      </div>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <a href="{% url 'download_pdf_report' %}?type=OFFICER_OPERATIONAL_SUMMARY" class="btn btn-outline-warning btn-sm fw-bold">
+        <i class="bi bi-file-earmark-pdf me-1"></i> Export Officer Operational PDF
+      </a>
+    </div>
+  </div>
+
+  <!-- Filter & Search Controls -->
+  <div class="bb-card p-3 mb-4">
+    <form method="GET" class="row g-2 align-items-end">
+      <!-- Search -->
+      <div class="col-md-3">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Search</label>
+        <div class="input-group input-group-sm">
+          <input type="text" name="q" class="form-control border-secondary" placeholder="Incident ID, Notes, Ranger..." value="{{ q }}" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+        </div>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="col-md-2">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Operational Status</label>
+        <select name="status" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <option value="ALL" {% if status_filter == 'ALL' %}selected{% endif %}>All Statuses</option>
+          {% for code, label in status_choices %}
+            <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Priority Filter -->
+      <div class="col-md-2">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Priority</label>
+        <select name="priority" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <option value="ALL" {% if priority_filter == 'ALL' %}selected{% endif %}>All Priorities</option>
+          {% for code, label in priority_choices %}
+            <option value="{{ code }}" {% if priority_filter == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Officer Filter -->
+      <div class="col-md-2">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Verifying Officer</label>
+        <select name="officer_id" class="form-select form-select-sm border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <option value="ALL" {% if officer_id == 'ALL' %}selected{% endif %}>All Officers</option>
+          <option value="UNVERIFIED" {% if officer_id == 'UNVERIFIED' %}selected{% endif %}>Unverified / Pending</option>
+          {% for off in officers %}
+            <option value="{{ off.id }}" {% if officer_id == off.id|stringformat:"s" %}selected{% endif %}>
+              {{ off.get_full_name|default:off.username }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Date Range -->
+      <div class="col-md-2">
+        <label class="form-label small fw-bold mb-1" style="color: var(--text-secondary);">Incident Date</label>
+        <div class="d-flex gap-1">
+          <input type="date" name="from_date" class="form-control form-control-sm border-secondary" value="{{ from_date }}" title="From Date" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <input type="date" name="to_date" class="form-control form-control-sm border-secondary" value="{{ to_date }}" title="To Date" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="col-md-1 d-flex gap-1">
+        <button type="submit" class="btn btn-bb-sand btn-sm flex-fill fw-bold text-nowrap">
+          <i class="bi bi-funnel-fill"></i>
+        </button>
+        <a href="{% url 'admin_officer_records' %}" class="btn btn-outline-secondary btn-sm flex-fill text-nowrap" title="Reset all filters">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Operational Incidents Table Card -->
+  <div class="bb-card p-4">
+    {% if incidents %}
+      <div class="table-responsive">
+        <table class="table table-bb table-hover align-middle">
+          <thead>
+            <tr>
+              <th>Incident ID</th>
+              <th>Date Reported</th>
+              <th>Category / Threat</th>
+              <th>Reported By</th>
+              <th>Verifying Officer</th>
+              <th>Zone / Location</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Officer Verification & Notes</th>
+              <th>Patrols</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inc in incidents %}
+            <tr>
+              <td class="font-monospace text-danger fw-bold">{{ inc.incident_id }}</td>
+              <td class="small font-monospace" style="color: var(--text-secondary);">
+                {{ inc.reported_at|date:"Y-m-d H:i" }}
+              </td>
+              <td>
+                <div class="fw-bold small" style="color: var(--text-primary);">{{ inc.get_category_display }}</div>
+                {% if inc.bustard %}
+                  <span class="badge bg-dark text-warning border border-warning small font-monospace">
+                    {{ inc.bustard.tag_id }}
+                  </span>
+                {% endif %}
+              </td>
+              <td>
+                {% if inc.reporter %}
+                  <div class="small fw-semibold" style="color: var(--text-primary);">
+                    {{ inc.reporter.get_full_name|default:inc.reporter.username }}
+                  </div>
+                  {% if inc.reporter.profile and inc.reporter.profile.badge_number %}
+                    <span class="small font-monospace text-muted">{{ inc.reporter.profile.badge_number }}</span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted small">Field Patrol / Public Alert</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if inc.verified_by %}
+                  <div class="small fw-bold text-info">
+                    <i class="bi bi-person-check-fill me-1"></i>{{ inc.verified_by.get_full_name|default:inc.verified_by.username }}
+                  </div>
+                  {% if inc.verified_at %}
+                    <span class="small font-monospace text-muted">{{ inc.verified_at|date:"Y-m-d H:i" }}</span>
+                  {% endif %}
+                {% else %}
+                  <span class="badge bg-secondary text-muted">Pending FO Action</span>
+                {% endif %}
+              </td>
+              <td class="small" style="color: var(--text-primary);">
+                {% if inc.location and inc.location.zone %}
+                  <span class="badge" style="background-color: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--surface-border);">
+                    <i class="bi bi-geo-alt-fill text-warning me-1"></i>{{ inc.location.zone.name }}
+                  </span>
+                {% elif inc.location and inc.location.latitude %}
+                  <span class="font-monospace text-muted">{{ inc.location.latitude|floatformat:4 }}, {{ inc.location.longitude|floatformat:4 }}</span>
+                {% else %}
+                  <span class="text-muted">Unspecified</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if inc.priority == 'CRITICAL' %}
+                  <span class="badge bg-danger">CRITICAL</span>
+                {% elif inc.priority == 'HIGH' %}
+                  <span class="badge bg-warning text-dark">HIGH</span>
+                {% elif inc.priority == 'MEDIUM' %}
+                  <span class="badge bg-info text-dark">MEDIUM</span>
+                {% else %}
+                  <span class="badge bg-secondary">LOW</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if inc.status == 'VERIFIED' %}
+                  <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Verified</span>
+                {% elif inc.status == 'RESOLVED' %}
+                  <span class="badge bg-primary"><i class="bi bi-check-all me-1"></i>Resolved</span>
+                {% elif inc.status == 'PENDING' %}
+                  <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+                {% elif inc.status == 'MORE_INFO' %}
+                  <span class="badge bg-info text-dark"><i class="bi bi-question-circle me-1"></i>More Info</span>
+                {% elif inc.status == 'REJECTED' %}
+                  <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Rejected</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ inc.get_status_display }}</span>
+                {% endif %}
+              </td>
+              <td style="max-width: 250px;">
+                {% if inc.verification_notes %}
+                  <div class="small fw-semibold text-truncate" style="color: var(--text-primary);" title="{{ inc.verification_notes }}">
+                    {{ inc.verification_notes }}
+                  </div>
+                {% else %}
+                  <div class="small text-muted text-truncate" title="{{ inc.description }}">
+                    {{ inc.description|truncatechars:65 }}
+                  </div>
+                {% endif %}
+              </td>
+              <td>
+                {% with assignments=inc.assignments.all %}
+                  {% if assignments %}
+                    <span class="badge bg-info text-dark" title="{{ assignments|length }} Patrol Tasks Dispatched">
+                      <i class="bi bi-send-check me-1"></i>{{ assignments|length }}
+                    </span>
+                  {% else %}
+                    <span class="text-muted small">—</span>
+                  {% endif %}
+                {% endwith %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination & Summary -->
+      <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-secondary flex-wrap gap-2">
+        <div class="small" style="color: var(--text-secondary);">
+          Showing records {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ filtered_count }} (Total in database: {{ total_count }})
+        </div>
+        {% if page_obj.has_other_pages %}
+          <nav aria-label="Page navigation">
+            <ul class="pagination pagination-sm mb-0">
+              {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link border-secondary" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if priority_filter != 'ALL' %}&priority={{ priority_filter }}{% endif %}{% if officer_id != 'ALL' %}&officer_id={{ officer_id }}{% endif %}{% if from_date %}&from_date={{ from_date }}{% endif %}{% if to_date %}&to_date={{ to_date }}{% endif %}">&laquo;</a>
+                </li>
+              {% endif %}
+              {% for p in page_obj.paginator.page_range %}
+                {% if p >= page_obj.number|add:'-2' and p <= page_obj.number|add:'2' %}
+                  <li class="page-item {% if page_obj.number == p %}active{% endif %}">
+                    <a class="page-link border-secondary" href="?page={{ p }}{% if q %}&q={{ q }}{% endif %}{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if priority_filter != 'ALL' %}&priority={{ priority_filter }}{% endif %}{% if officer_id != 'ALL' %}&officer_id={{ officer_id }}{% endif %}{% if from_date %}&from_date={{ from_date }}{% endif %}{% if to_date %}&to_date={{ to_date }}{% endif %}">{{ p }}</a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+              {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link border-secondary" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if status_filter != 'ALL' %}&status={{ status_filter }}{% endif %}{% if priority_filter != 'ALL' %}&priority={{ priority_filter }}{% endif %}{% if officer_id != 'ALL' %}&officer_id={{ officer_id }}{% endif %}{% if from_date %}&from_date={{ from_date }}{% endif %}{% if to_date %}&to_date={{ to_date }}{% endif %}">&raquo;</a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="bb-empty-state py-5 text-center">
+        <i class="bi bi-compass fs-1 text-muted mb-2 d-block"></i>
+        <h5 style="color: var(--text-primary);">No Forest Officer Records Match Filter</h5>
+        <p class="text-muted small mb-3">Adjust your date range, status, or search query to see operational records.</p>
+        <a href="{% url 'admin_officer_records' %}" class="btn btn-outline-warning btn-sm">Reset All Filters</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,84 @@
+# ==========================================
+# Bustard Beacon — Git Ignore Configuration
+# ==========================================
+
+# 1. Environment & Sensitive Credentials
+.env
+.env.local
+.env.*.local
+*.env
+!*.env.example
+
+# 2. Python & Bytecode Caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 3. Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# 4. Database Files (Local SQLite instance with user/session records)
+*.sqlite3
+*.sqlite3-journal
+db.sqlite3
+
+# 5. Testing, Code Coverage & Temporary Reports
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
+verification_screenshots/
+selenium_tests/screenshots/
+*.log
+
+# 6. IDE & Operating System Artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# 7. Temporary Assets & Redundant Binaries
+*.puml
+*.mdj
+plantuml.jar
+/media/

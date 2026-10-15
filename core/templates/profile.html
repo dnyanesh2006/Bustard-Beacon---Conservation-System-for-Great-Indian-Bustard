@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}My Profile & Settings — BUSTARD BEACON{% endblock %}
+
+{% block content %}
+<div class="container my-4" style="max-width: 700px;">
+  <div class="bb-card p-4">
+    <h4 class="text-light brand-font mb-4"><i class="bi bi-person-circle text-warning me-2"></i> Profile & Settings</h4>
+
+    <div class="text-center mb-4">
+      <div style="width:80px; height:80px; border-radius:50%; background:var(--primary-forest); border:3px solid var(--sand-accent); display:inline-flex; align-items:center; justify-content:center; margin:0 auto;">
+        <i class="bi bi-person-fill fs-2 text-light"></i>
+      </div>
+      <div class="mt-2 fw-bold text-light">{{ user.get_full_name|default:user.username }}</div>
+      <div>
+        <span class="badge badge-provenance badge-field-report mt-1">
+          {{ user_profile.get_role_display|default:"Conservation Team Member" }}
+        </span>
+      </div>
+      {% if user_profile.badge_number %}
+        <div class="text-muted small mt-1 font-monospace">Badge: {{ user_profile.badge_number }}</div>
+      {% endif %}
+    </div>
+
+    <form method="POST" action="{% url 'profile' %}?active_role={{ request.GET.active_role }}">
+      {% csrf_token %}
+      <input type="hidden" name="active_role" value="{{ request.GET.active_role }}">
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label text-secondary small fw-bold">First Name</label>
+          <input type="text" name="first_name" value="{{ user.first_name }}" class="form-control bg-dark text-light border-secondary">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label text-secondary small fw-bold">Last Name</label>
+          <input type="text" name="last_name" value="{{ user.last_name }}" class="form-control bg-dark text-light border-secondary">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label text-secondary small fw-bold">Email Address</label>
+        <input type="email" name="email" value="{{ user.email }}" class="form-control bg-dark text-light border-secondary">
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label text-secondary small fw-bold">Phone Number</label>
+          <input type="text" name="phone_number" value="{{ user_profile.phone_number|default:'' }}" class="form-control bg-dark text-light border-secondary" placeholder="+91 XXXXXXXXXX">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label text-secondary small fw-bold">Badge Number</label>
+          <input type="text" name="badge_number" value="{{ user_profile.badge_number|default:'' }}" class="form-control bg-dark text-light border-secondary" placeholder="e.g. RNG-NNJ-204">
+        </div>
+      </div>
+
+      {% if user_profile.role == 'RANGER' %}
+      <div class="mb-3 p-3 bg-dark rounded border border-secondary">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="is_active_field_mode" id="fieldModeSwitch"
+            {% if user_profile.is_active_field_mode %}checked{% endif %}>
+          <label class="form-check-label text-light" for="fieldModeSwitch">
+            <i class="bi bi-phone-fill text-warning me-2"></i><b>Field Mode Active</b>
+          </label>
+        </div>
+        <div class="text-muted small mt-1">When enabled, your ranger location is shared with authorized Forest Officers for coordination.</div>
+      </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-bb-sand w-100 fw-bold py-2">Save Profile Changes</button>
+    </form>
+
+    <div class="mt-4 pt-3 border-top border-secondary text-center">
+      <a href="{% url 'password_change' %}?active_role={{ request.GET.active_role }}" class="btn btn-outline-warning btn-sm px-4 me-2"><i class="bi bi-key"></i> Change Password</a>
+      <a href="{% url 'dashboard' %}?active_role={{ request.GET.active_role }}" class="btn btn-outline-secondary btn-sm px-4">Back to Dashboard</a>
+      <a href="{% url 'logout' %}?active_role={{ request.GET.active_role }}" class="btn btn-outline-danger btn-sm px-4 ms-2">Logout <i class="bi bi-box-arrow-right"></i></a>
+    </div>
+  </div>
+</div>
+{% endblock %}

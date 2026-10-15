@@ -1,0 +1,1173 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}BUSTARD BEACON — Protect the Grasslands, Protect the Bustard{% endblock %}
+
+{% block extra_head %}
+<style id="bb-landing-core-styles">
+  /* ============================================================
+     BUSTARD BEACON — CORE LANDING PAGE STYLES
+     Self-contained to guarantee immediate rendering and avoid cache delays
+     ============================================================ */
+
+  /* Global Container & Box Sizing Constraints */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  /* Universal Image Bounds Protection (prevents native resolution breakout) */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* ------------------------------------------------------------
+     1. HERO SECTION (EDGE-TO-EDGE VIDEO, CENTERED OVERLAY CONTENT)
+     ------------------------------------------------------------ */
+  .bb-hero {
+    position: relative;
+    width: 100%;
+    min-height: calc(100vh - 75px);
+    min-height: 650px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-color: #f4f6f5;
+    background-image: url('{% static "images/hero-fallback.jpg" %}');
+    background-size: cover;
+    background-position: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  .bb-hero-video-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .bb-hero-video {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    min-width: 100%;
+    min-height: 100%;
+    object-fit: cover;
+    object-position: center;
+    pointer-events: none;
+  }
+
+  /* Scrim overlay: subtle translucent overlay letting the Great Indian Bustard video shine through clearly */
+  .bb-hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.30) 50%, rgba(255, 255, 255, 0.40) 100%);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .bb-hero-content h1,
+  .bb-hero-content p.lead {
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.95), 0 2px 10px rgba(255, 255, 255, 0.75);
+  }
+
+  .bb-hero-content {
+    position: relative;
+    z-index: 10;
+    max-width: 900px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .bb-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    background-color: rgba(43, 89, 70, 0.09);
+    color: #2b5946;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 50px;
+    border: 1px solid rgba(43, 89, 70, 0.15);
+  }
+
+  /* Enhanced Numerical Statistics Counters */
+  .bb-hero-stat-card {
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1.5px solid #F4E4BA;
+    border-top: 3.5px solid #F9A608;
+    border-radius: 14px;
+    padding: 18px 14px;
+    text-align: center;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .bb-hero-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(249, 166, 8, 0.18);
+    border-color: #F9A608;
+  }
+
+  .bb-stat-number {
+    font-size: 2.75rem;
+    font-weight: 800;
+    color: #111815;
+    line-height: 1;
+    margin-bottom: 6px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+  }
+
+  .bb-stat-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.75px;
+    text-transform: uppercase;
+    color: #374151;
+    margin: 0;
+  }
+
+  @media (max-width: 575.98px) {
+    .bb-stat-number {
+      font-size: 2.1rem;
+    }
+    .bb-stat-label {
+      font-size: 0.74rem;
+    }
+  }
+
+  /* ------------------------------------------------------------
+     COORDINATED LIGHT YELLOW / GOLD & WHITE ALTERNATING THEME
+     ------------------------------------------------------------ */
+  .bb-section-white {
+    background-color: #ffffff !important;
+  }
+
+  .bb-section-yellow {
+    background-color: #FAF5E6 !important; /* Soft warm ivory / subtle golden tone */
+  }
+
+  .bb-feature-card-warm {
+    background-color: #FFFDF7 !important;
+    border: 1px solid #F2E4BE !important;
+    border-radius: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+
+  .bb-feature-card-warm:hover {
+    border-color: #F9A608 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(249, 166, 8, 0.12);
+  }
+
+  .bb-about-text-dark {
+    color: #1a201d !important;
+  }
+
+  /* ------------------------------------------------------------
+     2. SECTION TYPOGRAPHY & SPACING
+     ------------------------------------------------------------ */
+  .section-tag {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #2b5946;
+    background-color: rgba(43, 89, 70, 0.08);
+    padding: 4px 14px;
+    border-radius: 50px;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: #111815;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+  }
+
+  .section-subtitle {
+    font-size: 1.05rem;
+    color: #555555;
+    max-width: 680px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+  }
+
+  /* ------------------------------------------------------------
+     3. ABOUT SECTION FRAME
+     ------------------------------------------------------------ */
+  .bb-about-img-frame {
+    position: relative;
+    width: 100%;
+    height: 480px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
+    background-color: #f1f5f3;
+  }
+
+  .bb-about-img-frame img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+  }
+
+  /* ------------------------------------------------------------
+     4. BIRD SPECIES CARDS (CONTAINED, RIGID IMAGE AREA, ACCORDION)
+     ------------------------------------------------------------ */
+  .bb-species-card {
+    background: #ffffff;
+    border: 1px solid #e2e8e5;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+  }
+
+  .bb-species-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    border-color: #F9A608;
+  }
+
+  .bb-species-img-wrap {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    min-height: 220px;
+    max-height: 220px;
+    overflow: hidden;
+    background-color: #eef3f0;
+    flex-shrink: 0;
+  }
+
+  .bb-species-img-wrap img,
+  .bb-species-img {
+    width: 100% !important;
+    height: 220px !important;
+    max-height: 220px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    display: block !important;
+    transition: transform 0.35s ease;
+  }
+
+  .bb-species-card:hover .bb-species-img {
+    transform: scale(1.05);
+  }
+
+  .bb-species-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 3;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    pointer-events: none;
+  }
+
+  .bb-species-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+
+  .bb-species-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111815;
+    margin-bottom: 2px;
+  }
+
+  .bb-species-scientific {
+    font-size: 0.88rem;
+    font-style: italic;
+    color: #6c757d;
+    margin-bottom: 12px;
+  }
+
+  .bb-species-desc {
+    font-size: 0.9rem;
+    color: #4a5568;
+    line-height: 1.55;
+    flex-grow: 1;
+    margin-bottom: 16px;
+  }
+
+  .bb-species-details {
+    border-top: 1px dashed #e2e8e5;
+    padding-top: 12px;
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: #4a5568;
+    display: none;
+  }
+
+  .bb-species-details.show {
+    display: block !important;
+  }
+
+  /* ------------------------------------------------------------
+     5. PHOTO GALLERY GRID & LIGHTBOX
+     ------------------------------------------------------------ */
+  .bb-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+  }
+
+  @media (max-width: 991.98px) {
+    .bb-gallery-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .bb-about-img-frame {
+      height: 380px;
+    }
+  }
+
+  @media (max-width: 575.98px) {
+    .bb-gallery-grid {
+      grid-template-columns: 1fr;
+    }
+    .section-title {
+      font-size: 1.75rem;
+    }
+  }
+
+  .bb-gallery-item {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    height: 220px;
+    cursor: pointer;
+    background-color: #eef3f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .bb-gallery-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  }
+
+  .bb-gallery-item img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+    transition: transform 0.35s ease;
+  }
+
+  .bb-gallery-item:hover img {
+    transform: scale(1.06);
+  }
+
+  .bb-gallery-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px 14px;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+  }
+
+  .bb-gallery-item:hover .bb-gallery-overlay {
+    opacity: 1;
+  }
+
+  .bb-lightbox-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.92);
+    z-index: 1090;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .bb-lightbox-img {
+    max-width: 90vw;
+    max-height: 85vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  }
+
+  .bb-lightbox-close {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    background: #ffffff;
+    color: #111815;
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1095;
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+
+  .bb-lightbox-close:hover {
+    background: #F9A608;
+    transform: scale(1.08);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ============================================================
+     1. HERO SECTION (Full-width video background, preserved headline)
+     ============================================================ -->
+<section id="home" class="bb-hero">
+  <!-- Edge-to-Edge Hero Video Background -->
+  <div class="bb-hero-video-wrapper">
+    <video class="bb-hero-video" autoplay muted loop playsinline poster="{% static 'images/hero-fallback.jpg' %}">
+      <source src="{% static 'videos/hero-bustard.mp4' %}" type="video/mp4">
+    </video>
+  </div>
+
+  <!-- Subtle localized overlay to ensure crisp readability while letting video shine -->
+  <div class="bb-hero-overlay"></div>
+
+  <!-- Hero Content (PRESERVING EXACT HEADLINE CHARACTER-FOR-CHARACTER) -->
+  <div class="container bb-hero-content text-center py-5 px-3">
+    <div class="mb-3">
+      <span class="bb-hero-badge shadow-sm">
+        <i class="bi bi-shield-check me-1"></i> Official Grassland Conservation Platform
+      </span>
+    </div>
+
+    <!-- EXACT PRESERVED HEADLINE CHARACTER-FOR-CHARACTER -->
+    <h1 class="display-3 fw-bold mb-3 text-dark" style="letter-spacing: -1px;">Protecting the Grasslands.<br><span class="text-bb-sand">Protecting the Bustard.</span></h1>
+
+    <!-- PRESERVED LEAD TEXT -->
+    <p class="lead fw-normal mb-5 text-dark" style="max-width: 680px; margin: auto; font-size: 1.2rem; line-height: 1.6;">
+      Bustard Beacon connects field monitoring, incident reporting, conservation response and research to safeguard India's Great Indian Bustard.
+    </p>
+
+    <!-- PRESERVED ACTION BUTTONS WITH ACCESSIBLE HIGH CONTRAST -->
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <a class="btn btn-bb-sand btn-lg px-4 shadow-sm fw-bold" href="{% url 'live_map' %}">
+        <i class="bi bi-geo-alt-fill me-1"></i> Explore Sanctuary Map
+      </a>
+      <a class="btn btn-outline-dark btn-lg px-4 fw-bold" href="#species">
+        Learn About the Bustard
+      </a>
+      <a class="btn btn-bb-forest btn-lg px-4 shadow-sm fw-bold" href="{% url 'login' %}">
+        <i class="bi bi-box-arrow-in-right me-1"></i> Staff Login
+      </a>
+    </div>
+
+    <!-- Key Conservation Metrics Ticker -->
+    <div class="row g-3 justify-content-center mt-5 pt-3">
+      <div class="col-6 col-md-3">
+        <div class="bb-hero-stat-card">
+          <div class="bb-stat-number bb-counter" data-target="{{ registered_birds_count|default:"14" }}">{{ registered_birds_count|default:"14" }}</div>
+          <div class="bb-stat-label">Monitored Bustards</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="bb-hero-stat-card">
+          <div class="bb-stat-number bb-counter" data-target="{{ active_zones_count|default:"5" }}">{{ active_zones_count|default:"5" }}</div>
+          <div class="bb-stat-label">Conservation Zones</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="bb-hero-stat-card">
+          <div class="bb-stat-number bb-counter" data-target="{{ verified_field_incidents|default:"84" }}">{{ verified_field_incidents|default:"84" }}</div>
+          <div class="bb-stat-label">Verified Field Signals</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     2. ABOUT SECTION (Conservation Purpose & Actual Capabilities)
+     ============================================================ -->
+<section id="about" class="py-5 bb-section-white">
+  <div class="container py-4">
+    <div class="row align-items-center g-4 g-lg-5">
+      <div class="col-lg-6">
+        <span class="section-tag">About BUSTARD BEACON</span>
+        <h2 class="section-title">Safeguarding India's Most Threatened Grassland Flagship</h2>
+        <p class="lead text-dark mb-4" style="line-height: 1.6;">
+          BUSTARD BEACON is a specialized wildlife conservation and monitoring platform designed to help authorized teams organize field information and support coordinated protection of bustards and their habitats.
+        </p>
+        <p class="bb-about-text-dark mb-4" style="line-height: 1.65;">
+          With fewer than 150 Great Indian Bustards remaining in the wild, fragmented grasslands in Solapur, Maharashtra, and the Thar desert represent critical refuges. By linking field rangers on patrol with forest officers, veterinary intervention units, and scientific researchers, BUSTARD BEACON turns every ground observation into an immediate, coordinated conservation response.
+        </p>
+        
+        <!-- Factual Operational Pillars -->
+        <div class="row g-3 mt-2">
+          <div class="col-sm-6">
+            <div class="d-flex align-items-start gap-3 p-3 bb-feature-card-warm h-100">
+              <i class="bi bi-phone-vibrate text-bb-forest fs-3"></i>
+              <div>
+                <h6 class="fw-bold text-dark mb-1">Field Patrol Mode</h6>
+                <p class="small bb-about-text-dark mb-0">Offline-capable GPS tracking and rapid incident reporting for rangers.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="d-flex align-items-start gap-3 p-3 bb-feature-card-warm h-100">
+              <i class="bi bi-bounding-box text-bb-forest fs-3"></i>
+              <div>
+                <h6 class="fw-bold text-dark mb-1">GIS Spatial Zoning</h6>
+                <p class="small bb-about-text-dark mb-0">Automated zone detection, boundary alerts, and high-risk habitat analytics.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="d-flex align-items-start gap-3 p-3 bb-feature-card-warm h-100">
+              <i class="bi bi-heart-pulse text-bb-forest fs-3"></i>
+              <div>
+                <h6 class="fw-bold text-dark mb-1">Veterinary Dispatch</h6>
+                <p class="small bb-about-text-dark mb-0">Emergency medical rescue, case histories, and triage protocols.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="d-flex align-items-start gap-3 p-3 bb-feature-card-warm h-100">
+              <i class="bi bi-graph-up-arrow text-bb-forest fs-3"></i>
+              <div>
+                <h6 class="fw-bold text-dark mb-1">Research Registry</h6>
+                <p class="small bb-about-text-dark mb-0">Verified species registers, population metrics, and monthly reports.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="bb-about-img-frame">
+          <img src="{% static 'images/gallery/gallery-1.png' %}" alt="Great Indian Bustard in Grassland Habitat">
+          <!-- Informational Overlay Card -->
+          <div class="position-absolute bottom-0 start-0 m-3 m-md-4 p-3 bg-white bg-opacity-95 rounded-3 shadow-sm border border-light-subtle" style="max-width: 380px;">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span class="badge bg-danger">Critically Endangered</span>
+              <span class="small font-monospace text-muted">IUCN Red List</span>
+            </div>
+            <p class="small text-dark mb-0 fw-semibold">
+              <i class="bi bi-geo-alt-fill text-warning me-1"></i> Maldhok Sanctuary, Solapur District, Maharashtra
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     3. BIRD SPECIES SECTION (4 Cards with Local Images & Expandable Profiles)
+     ============================================================ -->
+<section id="species" class="py-5 bb-section-yellow">
+  <div class="container py-4">
+    <div class="text-center mb-5">
+      <span class="section-tag">Species Portfolio</span>
+      <h2 class="section-title">The Bustards of the Indian Subcontinent</h2>
+      <p class="section-subtitle">
+        Four distinct bustard species protected under coordinated conservation initiatives across grasslands, semi-arid savannahs, and alluvial plains.
+      </p>
+    </div>
+
+    <div class="row g-4">
+      <!-- Species Card 1: Great Indian Bustard -->
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="bb-species-card">
+          <div class="bb-species-img-wrap">
+            <img src="{% static 'images/species/great-indian-bustard.jpg' %}" class="bb-species-img" alt="Great Indian Bustard (Ardeotis nigriceps)" loading="lazy">
+            <span class="bb-species-badge bg-danger text-white">Critically Endangered</span>
+          </div>
+          <div class="bb-species-body">
+            <h3 class="bb-species-title">Great Indian Bustard</h3>
+            <div class="bb-species-scientific">Ardeotis nigriceps</div>
+            <p class="bb-species-desc">
+              A flagship grassland species and one of the heaviest flying birds in the world. Easily recognized by its large size, horizontal body, long white neck, and distinct black crown. Endemic to the Indian subcontinent, it is now critically endangered.
+            </p>
+            <button type="button" class="btn btn-outline-dark btn-sm w-100 fw-semibold mt-auto" onclick="toggleDetails('gib-details', this)">
+              <i class="bi bi-info-circle me-1"></i> <span>Explore Profile</span>
+            </button>
+            <div id="gib-details" class="bb-species-details">
+              <ul class="list-unstyled mb-0 small">
+                <li><b>Family:</b> Otididae</li>
+                <li><b>Body Weight:</b> Up to 15 kg (males)</li>
+                <li><b>Habitat:</b> Semi-arid short grasslands & agro-pastoral scrub</li>
+                <li><b>Key Threat:</b> Overhead power-line collision & habitat loss</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Species Card 2: Lesser Florican -->
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="bb-species-card">
+          <div class="bb-species-img-wrap">
+            <img src="{% static 'images/species/lesser-florican.png' %}" class="bb-species-img" alt="Lesser Florican (Sypheotides indicus)" loading="lazy">
+            <span class="bb-species-badge bg-warning text-dark">Endangered</span>
+          </div>
+          <div class="bb-species-body">
+            <h3 class="bb-species-title">Lesser Florican</h3>
+            <div class="bb-species-scientific">Sypheotides indicus</div>
+            <p class="bb-species-desc">
+              The smallest member of the bustard family. Males feature an entirely black head and neck with distinctive ribbon-like ear feathers, famous for spectacular vertical leap courtship displays during the monsoon breeding season.
+            </p>
+            <button type="button" class="btn btn-outline-dark btn-sm w-100 fw-semibold mt-auto" onclick="toggleDetails('lf-details', this)">
+              <i class="bi bi-info-circle me-1"></i> <span>Explore Profile</span>
+            </button>
+            <div id="lf-details" class="bb-species-details">
+              <ul class="list-unstyled mb-0 small">
+                <li><b>Family:</b> Otididae</li>
+                <li><b>Courtship:</b> Up to 500 vertical jumps per day</li>
+                <li><b>Habitat:</b> Mosaic grasslands & agricultural fallows</li>
+                <li><b>Distribution:</b> Western & central India during monsoon</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Species Card 3: Bengal Florican -->
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="bb-species-card">
+          <div class="bb-species-img-wrap">
+            <img src="{% static 'images/species/bengal-florican.png' %}" class="bb-species-img" alt="Bengal Florican (Houbaropsis bengalensis)" loading="lazy">
+            <span class="bb-species-badge bg-danger text-white">Critically Endangered</span>
+          </div>
+          <div class="bb-species-body">
+            <h3 class="bb-species-title">Bengal Florican</h3>
+            <div class="bb-species-scientific">Houbaropsis bengalensis</div>
+            <p class="bb-species-desc">
+              A rare and elusive bustard heavily adapted to tall alluvial grasslands. The male displays contrasting jet-black plumage with bright white wings. Habitat fragmentation and grassland conversion remain severe existential threats.
+            </p>
+            <button type="button" class="btn btn-outline-dark btn-sm w-100 fw-semibold mt-auto" onclick="toggleDetails('bf-details', this)">
+              <i class="bi bi-info-circle me-1"></i> <span>Explore Profile</span>
+            </button>
+            <div id="bf-details" class="bb-species-details">
+              <ul class="list-unstyled mb-0 small">
+                <li><b>Family:</b> Otididae</li>
+                <li><b>Habitat:</b> Lowland alluvial floodplains (Terai & Brahmaputra)</li>
+                <li><b>Status:</b> Fewer than 1,000 mature individuals worldwide</li>
+                <li><b>Protection:</b> Strict sanctuary riverine zone monitoring</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Species Card 4: Macqueen's Bustard -->
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="bb-species-card">
+          <div class="bb-species-img-wrap">
+            <img src="{% static 'images/species/macqueens-bustard.png' %}" class="bb-species-img" alt="Macqueen's Bustard (Chlamydotis macqueenii)" loading="lazy">
+            <span class="bb-species-badge bg-secondary text-white">Vulnerable</span>
+          </div>
+          <div class="bb-species-body">
+            <h3 class="bb-species-title">Macqueen's Bustard</h3>
+            <div class="bb-species-scientific">Chlamydotis macqueenii</div>
+            <p class="bb-species-desc">
+              Also known as the Asian Houbara. Unlike resident species, it is a winter migrant to India, settling in hyper-arid deserts and salt flats of Rajasthan and Gujarat with cryptic sandy-buff plumage engineered for desert camouflage.
+            </p>
+            <button type="button" class="btn btn-outline-dark btn-sm w-100 fw-semibold mt-auto" onclick="toggleDetails('mb-details', this)">
+              <i class="bi bi-info-circle me-1"></i> <span>Explore Profile</span>
+            </button>
+            <div id="mb-details" class="bb-species-details">
+              <ul class="list-unstyled mb-0 small">
+                <li><b>Family:</b> Otididae</li>
+                <li><b>Migration:</b> Winters from Central Asia into northwest India</li>
+                <li><b>Habitat:</b> Arid gravel plains, dunes, and salt flats</li>
+                <li><b>Adaptation:</b> Highly cryptic sand-toned plumage</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     4. HOW BUSTARD BEACON WORKS (Field Pipeline)
+     ============================================================ -->
+<section id="workflow" class="py-5 bb-section-white border-top border-bottom border-light-subtle">
+  <div class="container py-4">
+    <div class="text-center mb-5">
+      <span class="section-tag">Coordinated Pipeline</span>
+      <h2 class="section-title">How Bustard Beacon Works</h2>
+      <p class="section-subtitle">
+        A seamless digital workflow bridging field observers, sanctuary officers, and veterinary doctors.
+      </p>
+    </div>
+
+    <div class="row g-4 text-center">
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="p-3 bb-feature-card-warm h-100">
+          <div class="fs-1 text-bb-forest mb-2"><i class="bi bi-binoculars-fill"></i></div>
+          <div class="fw-bold text-dark small mb-1">1. Ranger Observes</div>
+          <p class="bb-about-text-dark small mb-0">GPS sighting or threat logged in field mode.</p>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="p-3 bb-feature-card-warm h-100">
+          <div class="fs-1 text-bb-forest mb-2"><i class="bi bi-broadcast"></i></div>
+          <div class="fw-bold text-dark small mb-1">2. Signal Transmitted</div>
+          <p class="bb-about-text-dark small mb-0">Offline queued data syncs with headquarters.</p>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="p-3 bb-feature-card-warm h-100">
+          <div class="fs-1 text-bb-forest mb-2"><i class="bi bi-geo-alt-fill"></i></div>
+          <div class="fw-bold text-dark small mb-1">3. Zone Identified</div>
+          <p class="bb-about-text-dark small mb-0">Spatial GIS boundary autodetects risk level.</p>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="p-3 bb-feature-card-warm h-100">
+          <div class="fs-1 text-bb-forest mb-2"><i class="bi bi-shield-check"></i></div>
+          <div class="fw-bold text-dark small mb-1">4. Officer Verifies</div>
+          <p class="bb-about-text-dark small mb-0">Command center reviews priority queue.</p>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="p-3 bb-feature-card-warm h-100">
+          <div class="fs-1 text-bb-forest mb-2"><i class="bi bi-heart-pulse-fill"></i></div>
+          <div class="fw-bold text-dark small mb-1">5. Medical Rescue</div>
+          <p class="bb-about-text-dark small mb-0">Veterinary team mobilized for urgent cases.</p>
+        </div>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="p-3 bb-feature-card-warm h-100">
+          <div class="fs-1 text-bb-forest mb-2"><i class="bi bi-graph-up"></i></div>
+          <div class="fw-bold text-dark small mb-1">6. Scientific Audit</div>
+          <p class="bb-about-text-dark small mb-0">Biologists analyze population trends.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preserved Conservation Motto -->
+    <div class="text-center mt-5 pt-4">
+      <blockquote class="blockquote fs-5 text-dark fw-semibold fst-italic mb-0">
+        "Every sighting can become a signal. Every signal can trigger a response. <br class="d-none d-md-inline">
+        <span class="text-bb-sand">Every response can help protect a species."</span>
+      </blockquote>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     5. PHOTO GALLERY SECTION (Curated Local Wildlife Photos & Lightbox)
+     ============================================================ -->
+<section id="gallery" class="py-5 bb-section-yellow">
+  <div class="container py-4">
+    <div class="text-center mb-5">
+      <span class="section-tag">Field Documentation</span>
+      <h2 class="section-title">Wildlife & Habitat Gallery</h2>
+      <p class="section-subtitle">
+        Curated high-resolution photographs documenting bustard species, nesting behaviors, and grassland ecology from the field.
+      </p>
+    </div>
+
+    <!-- Responsive Photo Grid -->
+    <div class="bb-gallery-grid">
+      <div class="bb-gallery-item" onclick="openLightbox('{% static 'images/gallery/gallery-1.png' %}', 'Great Indian Bustard (Ardeotis nigriceps) in grassland habitat')">
+        <img src="{% static 'images/gallery/gallery-1.png' %}" alt="Great Indian Bustard foraging in grassland" loading="lazy">
+        <div class="bb-gallery-overlay">Great Indian Bustard &mdash; Grassland Foraging</div>
+      </div>
+
+      <div class="bb-gallery-item" onclick="openLightbox('{% static 'images/gallery/gallery-2.jpg' %}', 'Great Indian Bustard male portrait showing distinct black crown')">
+        <img src="{% static 'images/gallery/gallery-2.jpg' %}" alt="Great Indian Bustard male portrait" loading="lazy">
+        <div class="bb-gallery-overlay">Adult Male &mdash; Black Crown Profile</div>
+      </div>
+
+      <div class="bb-gallery-item" onclick="openLightbox('{% static 'images/gallery/gallery-3.jpg' %}', 'Great Indian Bustard standing watch on rocky ridge')">
+        <img src="{% static 'images/gallery/gallery-3.jpg' %}" alt="Great Indian Bustard on rocky terrain" loading="lazy">
+        <div class="bb-gallery-overlay">Survey Sighting &mdash; Rocky Outcrop</div>
+      </div>
+
+      <div class="bb-gallery-item" onclick="openLightbox('{% static 'images/gallery/gallery-4.jpg' %}', 'Great Indian Bustard scanning open savanna')">
+        <img src="{% static 'images/gallery/gallery-4.jpg' %}" alt="Great Indian Bustard in morning savanna" loading="lazy">
+        <div class="bb-gallery-overlay">Dawn Patrol &mdash; Core Habitat</div>
+      </div>
+
+      <div class="bb-gallery-item" onclick="openLightbox('{% static 'images/gallery/gallery-5.png' %}', 'Male Lesser Florican with breeding plumage and ear plumes')">
+        <img src="{% static 'images/gallery/gallery-5.png' %}" alt="Lesser Florican male breeding plumage" loading="lazy">
+        <div class="bb-gallery-overlay">Lesser Florican &mdash; Breeding Display</div>
+      </div>
+
+      <div class="bb-gallery-item" onclick="openLightbox('{% static 'images/gallery/gallery-6.png' %}', 'Bengal Florican standing in native grassland')">
+        <img src="{% static 'images/gallery/gallery-6.png' %}" alt="Bengal Florican male in grassland" loading="lazy">
+        <div class="bb-gallery-overlay">Bengal Florican &mdash; Tall Grasslands</div>
+      </div>
+
+      <div class="bb-gallery-item" onclick="openLightbox('{% static 'images/gallery/gallery-7.png' %}', 'Macqueen\'s Bustard camouflaged in arid desert habitat')">
+        <img src="{% static 'images/gallery/gallery-7.png' %}" alt="Macqueen's Bustard in desert salt flat" loading="lazy">
+        <div class="bb-gallery-overlay">Macqueen's Bustard &mdash; Arid Terrain</div>
+      </div>
+
+      <div class="bb-gallery-item" onclick="openLightbox('{% static 'images/gallery/gallery-8.png' %}', 'Lesser Florican navigating monsoon vegetation')">
+        <img src="{% static 'images/gallery/gallery-8.png' %}" alt="Lesser Florican in monsoon vegetation" loading="lazy">
+        <div class="bb-gallery-overlay">Lesser Florican &mdash; Monsoon Meadow</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     6. SANCTUARY MAP SECTION (Maldhok Sanctuary / Nannaj Preview)
+     ============================================================ -->
+<section id="map-section" class="py-5 bb-section-white">
+  <div class="container py-4">
+    <div class="row align-items-center g-4 g-lg-5">
+      <div class="col-lg-5">
+        <span class="section-tag">Centurion Spatial GIS &bull; Sanctuary Mapping</span>
+        <h2 class="section-title">Great Indian Bustard Sanctuary</h2>
+        <p class="bb-about-text-dark mb-3" style="line-height: 1.6;">
+          Centred at Nannaj, Solapur District, Maharashtra, the sanctuary encompasses core breeding enclaves and extensive buffer zones. Our digital platform monitors live incidents, patrol routes, and eco-tourism boundaries across all zones.
+        </p>
+        <ul class="list-unstyled bb-about-text-dark mb-4">
+          <li class="mb-2"><i class="bi bi-check-circle-fill text-bb-forest me-2"></i> Core Breeding Sanctuary (Nannaj 100-Hectare Enclosure)</li>
+          <li class="mb-2"><i class="bi bi-check-circle-fill text-bb-forest me-2"></i> Solapur Grassland Buffer Zone & Predator Controls</li>
+          <li class="mb-2"><i class="bi bi-check-circle-fill text-bb-forest me-2"></i> Controlled Eco-Tourism Permitted Trails</li>
+        </ul>
+        <a href="{% url 'live_map' %}" class="btn btn-bb-forest px-4 fw-bold shadow-sm">
+          <i class="bi bi-map-fill me-1"></i> Open Full Interactive Map
+        </a>
+      </div>
+      <div class="col-lg-7">
+        <div class="bb-feature-card-warm p-2 shadow-sm position-relative">
+          <div id="landing-map-fallback-alert" class="alert alert-warning alert-dismissible fade show shadow-sm" role="alert" style="display: none; position: absolute; top: 16px; left: 16px; right: 16px; z-index: 1000; font-size: 0.85rem;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            <strong>Offline Map Notice:</strong> External map tiles could not be loaded. Sanctuary boundaries and core enclaves remain plotted.
+            <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          <div id="landingMap" style="height: 420px; min-height: 350px; width: 100%; border-radius: 8px; z-index: 1;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     7. CONNECT WITH OUR STAFF (Light-background CTA, existing login)
+     ============================================================ -->
+<section id="connect" class="py-5 bb-section-yellow border-top border-light-subtle">
+  <div class="container py-4 text-center">
+    <div class="mx-auto" style="max-width: 680px;">
+      <span class="section-tag">Secure Staff Gateway</span>
+      <h2 class="section-title">Authorized Personnel Access</h2>
+      <p class="bb-about-text-dark mb-4" style="font-size: 1.05rem; line-height: 1.6;">
+        Field Rangers, Forest Officers, Wildlife Veterinary Doctors, and Registered Researchers can sign in to their dedicated operational consoles below.
+      </p>
+      <div class="d-flex justify-content-center gap-3 flex-wrap">
+        <a href="{% url 'login' %}" class="btn btn-bb-sand btn-lg px-5 fw-bold shadow-sm">
+          <i class="bi bi-box-arrow-in-right me-2"></i> Staff Login
+        </a>
+        <a href="#about" class="btn btn-outline-dark btn-lg px-4 fw-bold">
+          <i class="bi bi-info-circle me-2"></i> About Platform
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     ACCESSIBLE LIGHTBOX MODAL
+     ============================================================ -->
+<div id="galleryLightbox" class="bb-lightbox-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-label="Photo Gallery Viewer">
+  <button type="button" class="bb-lightbox-close" onclick="closeLightbox()" aria-label="Close Lightbox">
+    &times;
+  </button>
+  <div class="text-center">
+    <img id="lightboxImg" src="" alt="Gallery Image" class="bb-lightbox-img">
+    <div id="lightboxCaption" class="text-white mt-3 fw-semibold small bg-dark bg-opacity-75 py-1 px-3 rounded-pill d-inline-block"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Accessible Species Accordion Expand/Collapse
+  function toggleDetails(id, btn) {
+    const el = document.getElementById(id);
+    const labelSpan = btn.querySelector('span');
+    if (!el) return;
+    
+    if (el.classList.contains('show')) {
+      el.classList.remove('show');
+      if (labelSpan) labelSpan.innerText = 'Explore Profile';
+    } else {
+      el.classList.add('show');
+      if (labelSpan) labelSpan.innerText = 'Close Profile';
+    }
+  }
+
+  // Lightbox Functionality
+  function openLightbox(src, caption) {
+    const box = document.getElementById('galleryLightbox');
+    const img = document.getElementById('lightboxImg');
+    const cap = document.getElementById('lightboxCaption');
+    if (box && img) {
+      img.src = src;
+      img.alt = caption || 'Wildlife photograph';
+      if (cap) cap.innerText = caption || '';
+      box.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  function closeLightbox() {
+    const box = document.getElementById('galleryLightbox');
+    if (box) {
+      box.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+  }
+
+  // Close lightbox on Escape key or backdrop click
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeLightbox();
+    }
+  });
+
+  const lbBackdrop = document.getElementById('galleryLightbox');
+  if (lbBackdrop) {
+    lbBackdrop.addEventListener('click', function(e) {
+      if (e.target === lbBackdrop) {
+        closeLightbox();
+      }
+    });
+  }
+
+  // Smooth Animated Statistics Counters
+  function initCounters() {
+    const counters = document.querySelectorAll('.bb-counter');
+    if (!counters.length) return;
+
+    const runCounter = (el) => {
+      const target = parseInt(el.getAttribute('data-target') || '0', 10);
+      const duration = 1500;
+      const startTime = performance.now();
+
+      function update(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const current = Math.floor(ease * target);
+        el.textContent = current;
+
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          el.textContent = target;
+        }
+      }
+      requestAnimationFrame(update);
+    };
+
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            runCounter(entry.target);
+            obs.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.2 });
+      counters.forEach(c => observer.observe(c));
+    } else {
+      counters.forEach(c => runCounter(c));
+    }
+  }
+
+  // Centurion Spatial GIS / Google Maps API Map Initialization
+  let landingGMap = null;
+  function initLandingMap() {
+    const mapDiv = document.getElementById("landingMap");
+    if (!mapDiv) return;
+
+    function renderGoogleMap() {
+      try {
+        const sanctuaryCenter = { lat: 17.828, lng: 75.857 };
+        landingGMap = new google.maps.Map(mapDiv, {
+          center: sanctuaryCenter,
+          zoom: 12,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+          zoomControl: true,
+          scrollwheel: false
+        });
+
+        const infoWindow = new google.maps.InfoWindow();
+
+        // Core Sanctuary Headquarters Marker
+        const hqMarker = new google.maps.Marker({
+          position: sanctuaryCenter,
+          map: landingGMap,
+          title: "Maldhok Bustard Sanctuary Headquarters",
+          icon: {
+            path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+            fillColor: "#2e7d32",
+            fillOpacity: 1,
+            strokeColor: "#ffffff",
+            strokeWeight: 2,
+            scale: 6
+          }
+        });
+
+        hqMarker.addListener("click", () => {
+          infoWindow.setContent("<div style='font-family:sans-serif; padding:4px;'><b>Maldhok Bustard Sanctuary</b><br><span style='font-size:12px; color:#4b5563;'>Nannaj Core Headquarters & Enclosure</span></div>");
+          infoWindow.open(landingGMap, hqMarker);
+        });
+
+        // Fetch real GIS data to render zone polygons & verified incidents
+        fetch('/api/map-data/')
+          .then(res => {
+            if (!res.ok) throw new Error("Network response was not ok");
+            return res.json();
+          })
+          .then(data => {
+            if (data.zones && data.zones.length > 0) {
+              data.zones.forEach(zone => {
+                if (zone.coordinates && zone.coordinates.length > 0) {
+                  const paths = zone.coordinates.map(pt => ({ lat: pt[0], lng: pt[1] }));
+                  const zoneColor = zone.color || '#2e7d32';
+                  const poly = new google.maps.Polygon({
+                    paths: paths,
+                    strokeColor: zoneColor,
+                    strokeOpacity: 0.85,
+                    strokeWeight: 2,
+                    fillColor: zoneColor,
+                    fillOpacity: 0.18,
+                    map: landingGMap
+                  });
+
+                  poly.addListener("click", (e) => {
+                    infoWindow.setContent(`<div style="font-family:sans-serif; padding:4px;"><b>${zone.name}</b><br><span style="font-size:11px; color:#6b7280;">${zone.type} (${zone.code})</span></div>`);
+                    infoWindow.setPosition(e.latLng);
+                    infoWindow.open(landingGMap);
+                  });
+                }
+              });
+            }
+
+            if (data.incidents && data.incidents.length > 0) {
+              data.incidents.slice(0, 15).forEach(inc => {
+                let color = '#f59e0b';
+                if (inc.priority === 'CRITICAL') color = '#ef4444';
+                else if (inc.priority === 'LOW') color = '#10b981';
+                else if (inc.priority === 'MEDIUM') color = '#3b82f6';
+
+                const incMarker = new google.maps.Marker({
+                  position: { lat: inc.latitude, lng: inc.longitude },
+                  map: landingGMap,
+                  title: `${inc.incident_id} (${inc.priority})`,
+                  icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: color,
+                    fillOpacity: 0.9,
+                    strokeColor: '#ffffff',
+                    strokeWeight: 1.5,
+                    scale: 6
+                  }
+                });
+
+                incMarker.addListener("click", () => {
+                  infoWindow.setContent(`<div style="font-family:sans-serif; padding:4px;"><b>${inc.incident_id}</b> (${inc.priority})<br><span style="font-size:12px;">${inc.category}</span><br><span style="font-size:11px; color:#6b7280;">${inc.reported_at}</span></div>`);
+                  infoWindow.open(landingGMap, incMarker);
+                });
+              });
+            }
+          })
+          .catch(err => {
+            console.warn("Could not load supplementary GIS data for preview map:", err);
+          });
+
+      } catch (err) {
+        console.warn("Google Maps preview init error:", err);
+        const fallbackAlert = document.getElementById('landing-map-fallback-alert');
+        if (fallbackAlert) {
+          fallbackAlert.style.display = 'block';
+        }
+      }
+    }
+
+    if (typeof google !== 'undefined' && google.maps) {
+      renderGoogleMap();
+    } else {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (typeof google !== 'undefined' && google.maps) {
+          clearInterval(interval);
+          renderGoogleMap();
+        } else if (attempts > 30) {
+          clearInterval(interval);
+          console.warn("Timed out waiting for Google Maps API.");
+          const fallbackAlert = document.getElementById('landing-map-fallback-alert');
+          if (fallbackAlert) {
+            fallbackAlert.style.display = 'block';
+          }
+        }
+      }, 100);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    initCounters();
+    initLandingMap();
+  });
+</script>
+{% endblock %}

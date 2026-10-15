@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %}System Users by Role — Admin Control Center{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+  <!-- Top Navigation & Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary btn-sm fw-bold">
+          <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+        </a>
+        <span class="badge bg-info text-dark font-monospace fw-bold">{{ total_users }} Total Registered</span>
+      </div>
+      <h3 class="brand-font mb-0" style="color: var(--text-primary);">
+        <i class="bi bi-people-fill text-info me-2"></i> System Personnel Directory
+      </h3>
+      <div class="small" style="color: var(--text-secondary);">
+        Read-only registry of all authorized actors organized by role and deployment.
+      </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'admin_users' %}" class="btn btn-outline-warning btn-sm fw-bold">
+        <i class="bi bi-sliders me-1"></i> Manage Roles & Permissions
+      </a>
+    </div>
+  </div>
+
+  <!-- Search & Role Metric Tiles -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-8">
+      <div class="row g-2">
+        <div class="col-sm-3">
+          <a href="?role=RANGER{% if q %}&q={{ q }}{% endif %}" class="text-decoration-none">
+            <div class="bb-card p-2 text-center h-100 {% if active_role == 'RANGER' %}border-warning{% endif %}">
+              <span class="text-warning fw-bold fs-4">{{ role_counts.RANGER }}</span>
+              <div class="small fw-semibold" style="color: var(--text-secondary);">RANGERS</div>
+            </div>
+          </a>
+        </div>
+        <div class="col-sm-3">
+          <a href="?role=FOREST_OFFICER{% if q %}&q={{ q }}{% endif %}" class="text-decoration-none">
+            <div class="bb-card p-2 text-center h-100 {% if active_role == 'FOREST_OFFICER' %}border-danger{% endif %}">
+              <span class="text-danger fw-bold fs-4">{{ role_counts.FOREST_OFFICER }}</span>
+              <div class="small fw-semibold" style="color: var(--text-secondary);">FOREST OFFICERS</div>
+            </div>
+          </a>
+        </div>
+        <div class="col-sm-3">
+          <a href="?role=MEDICAL_TEAM{% if q %}&q={{ q }}{% endif %}" class="text-decoration-none">
+            <div class="bb-card p-2 text-center h-100 {% if active_role == 'MEDICAL_TEAM' %}border-success{% endif %}">
+              <span class="text-success fw-bold fs-4">{{ role_counts.MEDICAL_TEAM }}</span>
+              <div class="small fw-semibold" style="color: var(--text-secondary);">MEDICAL TEAM</div>
+            </div>
+          </a>
+        </div>
+        <div class="col-sm-3">
+          <a href="?role=RESEARCHER{% if q %}&q={{ q }}{% endif %}" class="text-decoration-none">
+            <div class="bb-card p-2 text-center h-100 {% if active_role == 'RESEARCHER' %}border-info{% endif %}">
+              <span class="text-info fw-bold fs-4">{{ role_counts.RESEARCHER }}</span>
+              <div class="small fw-semibold" style="color: var(--text-secondary);">RESEARCHERS</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <form method="GET" class="d-flex h-100 align-items-center">
+        <input type="hidden" name="role" value="{{ active_role }}">
+        <div class="input-group">
+          <input type="text" name="q" class="form-control form-control-sm border-secondary" placeholder="Search by name, badge, email..." value="{{ q }}" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <button type="submit" class="btn btn-bb-sand btn-sm px-3"><i class="bi bi-search"></i> Search</button>
+          {% if q %}
+            <a href="?role={{ active_role }}" class="btn btn-outline-secondary btn-sm" title="Clear search"><i class="bi bi-x-circle"></i></a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Role Tabs -->
+  <div class="bb-card p-3">
+    <ul class="nav nav-pills mb-3 border-bottom border-secondary pb-3 gap-2" id="roleTabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link py-2 px-3 fw-bold {% if active_role == 'RANGER' %}active bg-warning text-dark{% else %}text-muted{% endif %}" href="?role=RANGER{% if q %}&q={{ q }}{% endif %}">
+          <i class="bi bi-shield-shaded me-1"></i> Field Rangers
+          <span class="badge {% if active_role == 'RANGER' %}bg-dark text-warning{% else %}bg-secondary{% endif %} ms-1">{{ role_counts.RANGER }}</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link py-2 px-3 fw-bold {% if active_role == 'FOREST_OFFICER' %}active bg-danger text-white{% else %}text-muted{% endif %}" href="?role=FOREST_OFFICER{% if q %}&q={{ q }}{% endif %}">
+          <i class="bi bi-compass me-1"></i> Forest Officers
+          <span class="badge {% if active_role == 'FOREST_OFFICER' %}bg-dark text-danger{% else %}bg-secondary{% endif %} ms-1">{{ role_counts.FOREST_OFFICER }}</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link py-2 px-3 fw-bold {% if active_role == 'MEDICAL_TEAM' %}active bg-success text-white{% else %}text-muted{% endif %}" href="?role=MEDICAL_TEAM{% if q %}&q={{ q }}{% endif %}">
+          <i class="bi bi-heart-pulse-fill me-1"></i> Medical Team
+          <span class="badge {% if active_role == 'MEDICAL_TEAM' %}bg-dark text-success{% else %}bg-secondary{% endif %} ms-1">{{ role_counts.MEDICAL_TEAM }}</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link py-2 px-3 fw-bold {% if active_role == 'RESEARCHER' %}active bg-info text-dark{% else %}text-muted{% endif %}" href="?role=RESEARCHER{% if q %}&q={{ q }}{% endif %}">
+          <i class="bi bi-bar-chart-line-fill me-1"></i> Researchers
+          <span class="badge {% if active_role == 'RESEARCHER' %}bg-dark text-info{% else %}bg-secondary{% endif %} ms-1">{{ role_counts.RESEARCHER }}</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link py-2 px-3 fw-bold {% if active_role == 'ADMIN' %}active bg-secondary text-white{% else %}text-muted{% endif %}" href="?role=ADMIN{% if q %}&q={{ q }}{% endif %}">
+          <i class="bi bi-gear-wide-connected me-1"></i> System Administrators
+          <span class="badge bg-dark ms-1">{{ role_counts.ADMIN }}</span>
+        </a>
+      </li>
+    </ul>
+
+    <!-- Active Role Table Content -->
+    <div class="tab-content">
+      {% if active_role == 'RANGER' %}
+        {% include 'admin_panel/partials/user_table.html' with user_list=rangers role_title="Field Ranger" role_badge="bg-warning text-dark" icon="bi-shield-shaded" %}
+      {% elif active_role == 'FOREST_OFFICER' %}
+        {% include 'admin_panel/partials/user_table.html' with user_list=officers role_title="Forest Officer" role_badge="bg-danger text-white" icon="bi-compass" %}
+      {% elif active_role == 'MEDICAL_TEAM' %}
+        {% include 'admin_panel/partials/user_table.html' with user_list=medical_users role_title="Medical Team" role_badge="bg-success text-white" icon="bi-heart-pulse-fill" %}
+      {% elif active_role == 'RESEARCHER' %}
+        {% include 'admin_panel/partials/user_table.html' with user_list=researchers role_title="Researcher" role_badge="bg-info text-dark" icon="bi-bar-chart-line-fill" %}
+      {% else %}
+        {% include 'admin_panel/partials/user_table.html' with user_list=admins role_title="System Administrator" role_badge="bg-secondary text-white" icon="bi-gear-wide-connected" %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

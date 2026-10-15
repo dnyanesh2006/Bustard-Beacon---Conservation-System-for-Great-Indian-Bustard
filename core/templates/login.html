@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+
+{% block title %}Staff Login — BUSTARD BEACON{% endblock %}
+
+{% block extra_head %}
+<style>
+@media (max-width: 576px) {
+  #roleTabs .nav-item {
+    flex: 1 1 0;
+    display: flex;
+  }
+  #roleTabs .nav-link {
+    padding: 0.5rem 0.1rem !important;
+    font-size: clamp(8.5px, 2.7vw, 12px);
+    letter-spacing: -0.2px;
+    width: 100%;
+    text-align: center;
+    white-space: normal !important;
+    line-height: 1.1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+.nav-pills .nav-link.active {
+  background-color: #f59e0b !important;
+  color: #111815 !important;
+  font-weight: 700;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5" style="max-width: 1000px;">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="bb-card p-0 shadow-lg overflow-hidden">
+        
+        <!-- Role Tabs Header with Real Navigable Anchor Links for Open-in-New-Tab Support -->
+        <div class="bg-dark p-3 border-bottom border-secondary text-center">
+          <h3 class="text-light brand-font mb-3"><i class="bi bi-shield-lock text-warning"></i> Staff Authentication</h3>
+          <div class="d-flex justify-content-center">
+            <ul class="nav nav-pills flex-nowrap w-100" style="white-space: nowrap;" id="roleTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'login' %}?role=admin" class="nav-link text-light {% if initial_role == 'admin' %}active{% endif %}" id="admin-tab" role="tab" data-role="admin">Administrator</a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'login' %}?role=officer" class="nav-link text-light {% if initial_role == 'officer' %}active{% endif %}" id="officer-tab" role="tab" data-role="officer">Forest Officer</a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'login' %}?role=ranger" class="nav-link text-light {% if initial_role == 'ranger' %}active{% endif %}" id="ranger-tab" role="tab" data-role="ranger">Ranger</a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'login' %}?role=medical" class="nav-link text-light {% if initial_role == 'medical' %}active{% endif %}" id="medical-tab" role="tab" data-role="medical">Medical Team</a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <a href="{% url 'login' %}?role=researcher" class="nav-link text-light {% if initial_role == 'researcher' %}active{% endif %}" id="researcher-tab" role="tab" data-role="researcher">Researcher</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="p-4">
+          <!-- Active Session Notice (Multi-Tab Awareness) -->
+          {% if user.is_authenticated and user_role %}
+            <div class="alert alert-info py-2 px-3 small d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <i class="bi bi-info-circle-fill me-1"></i> Currently active session: <b>{{ user.get_full_name|default:user.username }}</b> ({{ user_profile.get_role_display|default:user_role }}).
+              </div>
+              <a href="{% url 'dashboard' %}?active_role={{ user_role }}" class="btn btn-sm btn-outline-dark fw-bold text-nowrap ms-2">
+                Go to Dashboard &rarr;
+              </a>
+            </div>
+          {% endif %}
+
+          <p class="text-secondary small text-center mb-4" id="role-helper-text">Sign in to your Staff Account</p>
+
+          <form method="POST" action="{% url 'login' %}" id="staff-login-form">
+            {% csrf_token %}
+            <input type="hidden" name="login_role" id="login-role-input" value="{{ initial_role|default:'admin' }}">
+            
+            <div class="mb-3">
+              <label class="form-label text-secondary small fw-bold">Username</label>
+              <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-person"></i></span>
+                <input type="text" name="username" id="input-username" class="form-control bg-dark text-light border-secondary" placeholder="Username" autocomplete="username" required>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label text-secondary small fw-bold">Password</label>
+              <div class="input-group">
+                <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-key"></i></span>
+                <input type="password" name="password" id="input-password" class="form-control bg-dark text-light border-secondary" placeholder="Password" autocomplete="current-password" required>
+                <button type="button" class="btn btn-outline-secondary" onclick="togglePassword()"><i class="bi bi-eye" id="toggle-icon"></i></button>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="remember_me" id="rememberMe">
+                <label class="form-check-label text-secondary small" for="rememberMe">
+                  Remember session
+                </label>
+              </div>
+              <a href="{% url 'password_reset' %}" class="text-warning small text-decoration-none">Forgot Password?</a>
+            </div>
+
+            <button type="submit" class="btn btn-bb-sand w-100 py-2 fw-bold mb-3 shadow-sm">
+              Sign In to Platform <i class="bi bi-arrow-right-short fs-5"></i>
+            </button>
+            
+            <div class="text-center my-3 text-muted position-relative">
+                <hr>
+                <span class="bg-white px-2 position-absolute" style="top: -12px; left: 50%; transform: translateX(-50%); color: #6c757d;">or</span>
+            </div>
+
+            <a href="{% url 'google_login' %}" class="btn btn-outline-dark w-100 py-2 fw-bold d-flex align-items-center justify-content-center gap-2">
+              <i class="bi bi-google text-danger"></i> Continue with Google
+            </a>
+          </form>
+          
+          <div class="mt-4 text-center">
+             <button type="button" class="btn btn-sm btn-link text-muted text-decoration-none" onclick="fillDemoCredentials()">Fill Demo Credentials</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentRole = '{{ initial_role|default:"admin" }}';
+const demoUsers = {
+    'admin': {u: 'admin', p: 'admin123'},
+    'officer': {u: 'officer_solapur', p: 'officer123'},
+    'ranger': {u: 'ranger_nannaj', p: 'ranger123'},
+    'medical': {u: 'dr_vet_solapur', p: 'vet123'},
+    'researcher': {u: 'dr_researcher', p: 'research123'}
+};
+
+const textMap = {
+    'admin': 'Administrator Portal',
+    'officer': 'Forest Officer Operations',
+    'ranger': 'Ranger Field Mode',
+    'medical': 'Veterinary Dashboard',
+    'researcher': 'Research Analytics'
+};
+
+function setRoleHelper(role) {
+    currentRole = role;
+    if (textMap[role]) {
+        document.getElementById('role-helper-text').innerText = textMap[role];
+    }
+    const roleInput = document.getElementById('login-role-input');
+    if (roleInput) {
+        roleInput.value = role;
+    }
+    
+    // Update active tab class
+    document.querySelectorAll('#roleTabs .nav-link').forEach(link => {
+        if (link.getAttribute('data-role') === role) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    setRoleHelper(currentRole);
+
+    // Attach click listeners to role tabs for smooth switching without full page reload
+    document.querySelectorAll('#roleTabs .nav-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            // Only intercept primary left click without modifiers
+            if (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+                e.preventDefault();
+                const role = this.getAttribute('data-role');
+                setRoleHelper(role);
+                if (window.history && window.history.pushState) {
+                    window.history.pushState(null, '', this.href);
+                }
+            }
+        });
+    });
+});
+
+function fillDemoCredentials() {
+    if (demoUsers[currentRole]) {
+        document.getElementById('input-username').value = demoUsers[currentRole].u;
+        document.getElementById('input-password').value = demoUsers[currentRole].p;
+    }
+}
+
+function togglePassword() {
+    const pwd = document.getElementById('input-password');
+    const icon = document.getElementById('toggle-icon');
+    if (pwd.type === 'password') {
+        pwd.type = 'text';
+        icon.classList.replace('bi-eye', 'bi-eye-slash');
+    } else {
+        pwd.type = 'password';
+        icon.classList.replace('bi-eye-slash', 'bi-eye');
+    }
+}
+</script>
+{% endblock %}

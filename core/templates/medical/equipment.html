@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Veterinary Equipment Inventory{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="row g-4">
+    <!-- Main Inventory Table -->
+    <div class="{% if request.user.profile.role == 'MEDICAL_TEAM' %}col-lg-8{% else %}col-12{% endif %}">
+      <div class="bb-card p-4">
+        <h4 class="brand-font mb-3" style="color: var(--text-primary);"><i class="bi bi-box-seam text-warning me-2"></i> Veterinary Equipment & Rescue Kit Inventory</h4>
+        
+        {% if request.user.profile.role == 'FOREST_OFFICER' %}
+        <div class="alert alert-info small py-2 mb-3">
+          <i class="bi bi-info-circle me-2"></i> <strong>Read-Only View:</strong> You are viewing the medical inventory for operational awareness. Only the Medical Team can manage equipment records.
+        </div>
+        {% endif %}
+
+        {% if equipment_list %}
+          <div class="table-responsive">
+            <table class="table table-bb table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Available</th>
+                  <th>In Use</th>
+                  <th>Status</th>
+                  {% if request.user.profile.role == 'MEDICAL_TEAM' %}
+                  <th>Actions</th>
+                  {% endif %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for eq in equipment_list %}
+                <tr>
+                  <td><b style="color: var(--text-primary);">{{ eq.name }}</b></td>
+                  <td class="small" style="color: var(--text-secondary);">{{ eq.category }}</td>
+                  <td><span class="badge bg-success">{{ eq.quantity_available }} units</span></td>
+                  <td><span class="badge bg-secondary">{{ eq.quantity_in_use }} units</span></td>
+                  <td>
+                    {% if eq.status == 'OPERATIONAL' %}<span class="badge bg-success">OPERATIONAL</span>
+                    {% elif eq.status == 'MAINTENANCE' %}<span class="badge bg-warning text-dark">MAINTENANCE</span>
+                    {% else %}<span class="badge bg-danger">OUT OF SERVICE</span>{% endif %}
+                  </td>
+                  {% if request.user.profile.role == 'MEDICAL_TEAM' %}
+                  <td>
+                    <!-- Edit Button triggers Modal -->
+                    <button class="btn btn-sm btn-outline-info py-0 px-2" data-bs-toggle="modal" data-bs-target="#editModal{{ eq.id }}"><i class="bi bi-pencil"></i></button>
+                    <!-- Delete Button triggers Modal -->
+                    <button class="btn btn-sm btn-outline-danger py-0 px-2" data-bs-toggle="modal" data-bs-target="#deleteModal{{ eq.id }}"><i class="bi bi-trash"></i></button>
+
+                    <!-- Edit Modal -->
+                    <div class="modal fade" id="editModal{{ eq.id }}" tabindex="-1" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content" style="background-color: var(--bg-tertiary); color: var(--text-primary);">
+                          <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="edit">
+                            <input type="hidden" name="eq_id" value="{{ eq.id }}">
+                            <div class="modal-header border-secondary">
+                              <h5 class="modal-title brand-font text-info">Edit Equipment: {{ eq.name }}</h5>
+                              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body text-start">
+                              <div class="mb-3">
+                                <label class="form-label small fw-bold" style="color: var(--text-secondary);">Equipment Name</label>
+                                <input type="text" name="name" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" value="{{ eq.name }}" required>
+                              </div>
+                              <div class="mb-3">
+                                <label class="form-label small fw-bold" style="color: var(--text-secondary);">Category</label>
+                                <input type="text" name="category" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" value="{{ eq.category }}">
+                              </div>
+                              <div class="row">
+                                <div class="col-md-6 mb-3">
+                                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Quantity Available</label>
+                                  <input type="number" name="quantity_available" min="0" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" value="{{ eq.quantity_available }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                  <label class="form-label small fw-bold" style="color: var(--text-secondary);">Quantity In Use</label>
+                                  <input type="number" name="quantity_in_use" min="0" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" value="{{ eq.quantity_in_use }}">
+                                </div>
+                              </div>
+                              <div class="mb-3">
+                                <label class="form-label small fw-bold" style="color: var(--text-secondary);">Operational Status</label>
+                                <select name="status" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+                                  <option value="OPERATIONAL" {% if eq.status == 'OPERATIONAL' %}selected{% endif %}>Operational</option>
+                                  <option value="MAINTENANCE" {% if eq.status == 'MAINTENANCE' %}selected{% endif %}>Under Maintenance</option>
+                                  <option value="OUT_OF_SERVICE" {% if eq.status == 'OUT_OF_SERVICE' %}selected{% endif %}>Out of Service</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div class="modal-footer border-secondary">
+                              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                              <button type="submit" class="btn btn-info btn-sm fw-bold">Save Changes</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Delete Modal -->
+                    <div class="modal fade" id="deleteModal{{ eq.id }}" tabindex="-1" aria-hidden="true">
+                      <div class="modal-dialog">
+                        <div class="modal-content" style="background-color: var(--bg-tertiary); color: var(--text-primary);">
+                          <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="eq_id" value="{{ eq.id }}">
+                            <div class="modal-header border-secondary">
+                              <h5 class="modal-title brand-font text-danger">Confirm Deletion</h5>
+                              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body text-start">
+                              <p>Are you sure you want to permanently delete <strong>{{ eq.name }}</strong> from the inventory?</p>
+                              <p class="small text-muted mb-0">This action cannot be undone.</p>
+                            </div>
+                            <div class="modal-footer border-secondary">
+                              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                              <button type="submit" class="btn btn-danger btn-sm fw-bold">Delete Equipment</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+
+                  </td>
+                  {% endif %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="bb-empty-state">
+            <i class="bi bi-box"></i>
+            <h6>No equipment registered in inventory.</h6>
+            {% if request.user.profile.role == 'MEDICAL_TEAM' %}
+            <p class="text-muted small mb-0">Add veterinary field rescue kits using the form.</p>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Add Equipment Form (Medical Team Only) -->
+    {% if request.user.profile.role == 'MEDICAL_TEAM' %}
+    <div class="col-lg-4">
+      <div class="bb-card p-4">
+        <h5 class="text-warning brand-font mb-3"><i class="bi bi-plus-circle me-1"></i> Register Equipment</h5>
+        <form method="POST">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add">
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Equipment Name</label>
+            <input type="text" name="name" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="e.g. Avian Transport Crate" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Category</label>
+            <input type="text" name="category" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="e.g. Rescue Kit, Intensive Care">
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">Available</label>
+              <input type="number" name="quantity_available" value="1" min="0" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label small fw-bold" style="color: var(--text-secondary);">In Use</label>
+              <input type="number" name="quantity_in_use" value="0" min="0" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Operational Status</label>
+            <select name="status" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+              <option value="OPERATIONAL">Operational</option>
+              <option value="MAINTENANCE">Under Maintenance</option>
+              <option value="OUT_OF_SERVICE">Out of Service</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-bb-sand w-100 fw-bold">Add to Inventory</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

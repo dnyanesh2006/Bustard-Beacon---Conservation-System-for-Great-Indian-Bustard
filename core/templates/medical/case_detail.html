@@ -1,0 +1,317 @@
+{% extends 'base.html' %}
+
+{% block title %}Medical Clinical Record — {{ case.case_id }}{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h3 class="brand-font mb-0" style="color: var(--text-primary);">Medical Case: <span class="text-warning font-monospace">{{ case.case_id }}</span></h3>
+      <div class="small" style="color: var(--text-secondary);">Created on {{ case.created_at|date:"Y-m-d H:i" }} by {{ case.created_by.username }}</div>
+    </div>
+    {% if request.user.profile.role != 'FOREST_OFFICER' %}
+    <a href="{% url 'medical_cases' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back to Cases</a>
+    {% endif %}
+  </div>
+
+  <div class="row g-4 align-items-stretch">
+    <!-- Top Left: Original Field Incident Context (Section 1) -->
+    <div class="col-lg-6">
+      <div class="bb-card p-4 h-100 border border-secondary" style="background-color: var(--bg-tertiary);">
+        <h5 class="text-info brand-font mb-3"><i class="bi bi-info-circle-fill me-2"></i> Original Field Incident Context</h5>
+        {% if case.incident %}
+        <div class="row g-3 small">
+          <div class="col-md-6">
+            <div style="color: var(--text-secondary);">Incident ID</div>
+            <div class="fw-bold font-monospace" style="color: #212121;">{{ case.incident.incident_id }}</div>
+          </div>
+          <div class="col-md-6">
+            <div style="color: var(--text-secondary);">Category & Priority</div>
+            <div><span class="badge bg-secondary">{{ case.incident.get_category_display }}</span> <span class="badge bg-danger">{{ case.incident.get_priority_display }}</span></div>
+          </div>
+          <div class="col-md-6">
+            <div style="color: var(--text-secondary);">Reported By</div>
+            <div>Ranger: <strong>{{ case.incident.reporter.username }}</strong></div>
+          </div>
+          <div class="col-md-6">
+            <div style="color: var(--text-secondary);">Incident Time</div>
+            <div>{{ case.incident.reported_at|date:"Y-m-d H:i" }}</div>
+          </div>
+          {% if case.incident.location %}
+          <div class="col-md-6">
+            <div style="color: var(--text-secondary);">Location & Zone</div>
+            <div>{{ case.incident.location.zone.name|default:"Unknown Zone" }}</div>
+            <div class="font-monospace text-muted">{{ case.incident.location.latitude|floatformat:4 }}, {{ case.incident.location.longitude|floatformat:4 }}</div>
+          </div>
+          {% endif %}
+          {% if case.incident.verified_by %}
+          <div class="col-md-6">
+            <div style="color: var(--text-secondary);">Verified/Assigned By</div>
+            <div>Officer: <strong>{{ case.incident.verified_by.username }}</strong></div>
+          </div>
+          {% endif %}
+          {% if case.bustard %}
+          <div class="col-md-12">
+            <div class="fw-bold mb-2" style="color: var(--text-secondary);">Identified Bird Details</div>
+            <div class="d-flex align-items-center">
+              {% if case.bustard.images.exists %}
+                <img src="{{ case.bustard.images.first.image.url }}" alt="Registered Bird" class="rounded me-3 object-fit-cover shadow-sm zoomable-img" style="height: 60px; width: 60px;">
+              {% else %}
+                <div class="rounded me-3 d-flex align-items-center justify-content-center bg-light text-secondary shadow-sm" style="height: 60px; width: 60px;">
+                  <i class="bi bi-camera fs-4"></i>
+                </div>
+              {% endif %}
+              <div>
+                <div class="fw-bold text-success fs-6">{{ case.bustard.tag_id }}</div>
+                <div class="small text-muted">{{ case.bustard.name|default:"Unnamed" }} &bull; {{ case.bustard.get_sex_display }} &bull; {{ case.bustard.get_age_class_display }}</div>
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <div class="col-md-12">
+            <div class="fw-bold mb-1" style="color: var(--text-secondary);">Identified Bird Details</div>
+            <div class="text-danger small fw-bold"><i class="bi bi-question-circle me-1"></i> Unknown / Unregistered Bird</div>
+          </div>
+          {% endif %}
+          <div class="col-12 mt-2">
+            <div class="fw-bold mb-1" style="color: var(--text-secondary);">Ranger Description</div>
+            <div class="small" style="color: var(--text-primary);">
+              {% if case.incident and case.incident.description %}
+                {{ case.incident.description|linebreaksbr }}
+              {% elif case.symptoms %}
+                {{ case.symptoms|linebreaksbr }}
+              {% else %}
+                <span class="fst-italic text-muted">No Ranger description recorded.</span>
+              {% endif %}
+            </div>
+          </div>
+          {% if case.incident.images.exists %}
+          <div class="col-12 mt-2">
+            <div style="color: var(--text-secondary);" class="mb-1">Field Photos</div>
+            <div class="d-flex flex-wrap gap-2">
+              {% for img in case.incident.images.all %}
+                <img src="{{ img.image.url }}" alt="Incident Photo" class="img-thumbnail border-secondary zoomable-img" style="max-height: 150px; background-color: var(--bg-secondary);">
+              {% endfor %}
+            </div>
+          </div>
+          {% else %}
+          <div class="col-12 mt-2">
+            <div class="p-2 rounded border border-secondary small text-center" style="background-color: var(--bg-tertiary); color: var(--text-muted);">
+              No image was stored for this incident.
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="bb-empty-state h-100 d-flex flex-column justify-content-center align-items-center border-0" style="background-color: transparent;">
+          <i class="bi bi-file-earmark-x fs-1"></i>
+          <h6 class="mt-2">Direct Medical Entry</h6>
+          <p class="small text-muted mb-0">This case was created directly and is not linked to a field incident report.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Top Right: Patient Condition & Symptoms (Section 2) -->
+    <div class="col-lg-6">
+      <div class="bb-card p-4 h-100">
+        <h5 class="text-warning brand-font mb-3"><i class="bi bi-journal-medical me-2"></i> Patient Condition & Symptoms</h5>
+        
+        <h6 class="small fw-bold mt-2" style="color: var(--text-primary);">A. Initial Report / Observed Symptoms</h6>
+        <div class="p-3 rounded border border-secondary mb-4" style="background-color: var(--bg-secondary);">
+          <div class="small text-muted mb-2 fst-italic">
+            Source: {% if case.incident %}Field Incident by {{ case.incident.reporter.username }}{% else %}Direct Entry by {{ case.created_by.username }}{% endif %}
+            ({{ case.created_at|date:"Y-m-d H:i" }})
+          </div>
+          <div class="small fw-bold mb-1" style="color: var(--text-secondary);">Reported Condition: <span class="fw-bold" style="color: var(--text-primary);">{{ case.condition_summary }}</span></div>
+          <div class="small fw-bold mt-2" style="color: var(--text-secondary);">Visible Symptoms / Field Observations:</div>
+          <div class="small" style="color: var(--text-primary);">{{ case.symptoms }}</div>
+        </div>
+
+        <h6 class="small fw-bold" style="color: var(--text-primary);">B. Medical Examination / Current Condition</h6>
+        <div class="p-3 rounded border border-secondary" style="background-color: var(--bg-secondary);">
+          {% if case.diagnosis %}
+            <div class="small fw-bold mb-1" style="color: var(--text-secondary);">Veterinary Findings & Diagnosis</div>
+            <div class="small" style="color: var(--text-primary);">{{ case.diagnosis }}</div>
+          {% else %}
+            <div class="text-muted small fst-italic">Medical examination not recorded yet. Use the Rehabilitation Controls to update the examination findings.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Left: Treatment & Medication History (Section 3) -->
+    <div class="col-lg-6">
+      <div class="bb-card p-4 h-100">
+        <h5 class="text-warning brand-font mb-3"><i class="bi bi-clock-history me-2"></i> Treatment & Medication History</h5>
+
+        {% if treatments %}
+          <div class="list-group list-group-flush rounded border border-secondary mb-3" style="background-color: var(--bg-tertiary); max-height: 250px; overflow-y: auto;">
+            {% for t in treatments %}
+              <div class="list-group-item border-secondary" style="background-color: var(--bg-tertiary); color: var(--text-primary);">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <b class="text-warning small"><i class="bi bi-person me-1"></i> Dr. {{ t.administered_by.username }}</b>
+                  <span class="small" style="color: var(--text-muted);">{{ t.treatment_time|date:"M d, H:i" }}</span>
+                </div>
+                <div class="small mb-1">{{ t.treatment_description }}</div>
+                {% if t.medications_given %}
+                  <div class="text-info style-small" style="font-size:0.8rem;"><b>Meds:</b> {{ t.medications_given }} | <b>Dosage:</b> {{ t.dosage_notes }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="bb-empty-state py-3 mb-3">
+            <i class="bi bi-journal"></i>
+            <h6>No treatment logs recorded yet.</h6>
+          </div>
+        {% endif %}
+
+        <!-- Form to Add Treatment Log -->
+        {% if request.user.profile.role == 'MEDICAL_TEAM' %}
+        <form method="POST" action="{% url 'medical_case_detail' case.id %}" class="p-3 rounded border border-secondary mt-auto" style="background-color: var(--bg-secondary);">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="add_treatment">
+          <h6 class="brand-font small mb-2" style="color: var(--text-primary);"><i class="bi bi-plus-circle text-success me-1"></i> Add Clinical Treatment Log</h6>
+
+          <div class="mb-2">
+            <textarea name="treatment_description" rows="2" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-tertiary); color: var(--text-primary);" placeholder="Treatment procedure performed..." required></textarea>
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col-md-6">
+              <input type="text" name="medications_given" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-tertiary); color: var(--text-primary);" placeholder="Medications given (e.g. Meloxicam)">
+            </div>
+            <div class="col-md-6">
+              <input type="text" name="dosage_notes" class="form-control form-control-sm border-secondary" style="background-color: var(--bg-tertiary); color: var(--text-primary);" placeholder="Dosage notes (e.g. 0.2mg/kg)">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-bb-sand btn-sm w-100 fw-bold">Record Treatment Log</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Bottom Right: Rehabilitation Controls (Section 4) -->
+    <div class="col-lg-6">
+      <div class="bb-card p-4 h-100">
+        <h5 class="text-warning brand-font mb-3"><i class="bi bi-sliders me-2"></i> Rehabilitation Controls</h5>
+        <div class="text-secondary small mb-3">Manage ongoing recovery and care. Ensure updates are recorded.</div>
+
+        {% if request.user.profile.role == 'MEDICAL_TEAM' %}
+        <form method="POST" action="{% url 'medical_case_detail' case.id %}" class="mt-auto">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="update_status">
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Current Rehabilitation Stage</label>
+            <select name="rehabilitation_stage" id="stageSelect" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+              <option value="RECOVERY_ENCLOSURE" {% if case.rehabilitation_stage == 'RECOVERY_ENCLOSURE' %}selected{% endif %}>Recovery Enclosure</option>
+              <option value="ICU" {% if case.rehabilitation_stage == 'ICU' %}selected{% endif %}>ICU Intensive Care Unit</option>
+              <option value="PRE_RELEASE" {% if case.rehabilitation_stage == 'PRE_RELEASE' %}selected{% endif %}>Pre-Release Outdoor Flight Cage</option>
+              <option value="RELEASED" {% if case.rehabilitation_stage == 'RELEASED' %}selected{% endif %}>Successfully Released to Wild</option>
+              <option value="DECEASED" {% if case.rehabilitation_stage == 'DECEASED' %}selected{% endif %}>Confirmed Dead / Deceased</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Case Status</label>
+            <select name="status" id="statusSelect" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+              <option value="ACTIVE" {% if case.status == 'ACTIVE' %}selected{% endif %}>Active Emergency</option>
+              <option value="UNDER_TREATMENT" {% if case.status == 'UNDER_TREATMENT' %}selected{% endif %}>Under Active Treatment</option>
+              <option value="REHABILITATION" {% if case.status == 'REHABILITATION' %}selected{% endif %}>In Rehabilitation Enclosure</option>
+              <option value="RECOVERED" {% if case.status == 'RECOVERED' %}selected{% endif %}>Fit for Release / Recovered</option>
+              <option value="CLOSED" {% if case.status == 'CLOSED' %}selected{% endif %}>Case Closed (Released / Deceased)</option>
+            </select>
+            <div id="statusHelper" class="form-text small mt-1" style="color: var(--text-secondary);">Available case statuses depend on the selected bird location and rehabilitation stage.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold" style="color: var(--text-secondary);">Recovery Observations & Medical Examination Findings</label>
+            <textarea name="diagnosis" rows="3" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Official examination findings, recovery progress, or next review date...">{{ case.diagnosis }}</textarea>
+            <div class="form-text text-muted small">This information is visible to the coordinating Forest Officer.</div>
+          </div>
+
+          <button type="submit" class="btn btn-bb-forest w-100 fw-bold">Save Rehabilitation Update</button>
+        </form>
+        {% else %}
+        <div class="p-3 rounded border border-secondary" style="background-color: var(--bg-secondary);">
+          <div class="mb-3">
+            <div class="small fw-bold text-secondary">Current Rehabilitation Stage</div>
+            <div class="fw-bold text-light">{{ case.get_rehabilitation_stage_display }}</div>
+          </div>
+          <div class="mb-3">
+            <div class="small fw-bold text-secondary">Case Status</div>
+            <div class="fw-bold text-warning">{{ case.get_status_display }}</div>
+          </div>
+          {% if case.rehabilitation_stage == 'DECEASED' %}
+          <div class="mb-3 p-2 border border-danger rounded bg-dark">
+            <div class="small fw-bold text-danger mb-1"><i class="bi bi-exclamation-triangle-fill"></i> Death Details</div>
+            <div class="small text-light">
+              <div class="mb-1"><strong>Time recorded:</strong> {{ case.updated_at|date:"Y-m-d H:i" }}</div>
+              <div><strong>Cause of death:</strong> {% if case.diagnosis %}{{ case.diagnosis }}{% else %}<span class="fst-italic text-muted">Unknown / Not Recorded</span>{% endif %}</div>
+            </div>
+          </div>
+          {% endif %}
+          <div>
+            <div class="small fw-bold text-secondary">Recovery Observations & Examination Findings</div>
+            {% if case.diagnosis %}
+              <div class="text-light small mt-1">{{ case.diagnosis }}</div>
+            {% else %}
+              <div class="text-muted small fst-italic mt-1">No recovery observations or examination findings recorded yet.</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="alert alert-info small mt-3 py-2">
+          <i class="bi bi-info-circle me-1"></i> Only the assigned Medical Team can modify clinical status and add treatment logs.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+</div>
+
+{% if request.user.profile.role == 'MEDICAL_TEAM' %}
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const stageSelect = document.getElementById('stageSelect');
+    const statusSelect = document.getElementById('statusSelect');
+    
+    if (!stageSelect || !statusSelect) return;
+
+    const validMapping = {
+      'RECOVERY_ENCLOSURE': ['UNDER_TREATMENT', 'REHABILITATION'],
+      'ICU': ['ACTIVE', 'UNDER_TREATMENT'],
+      'PRE_RELEASE': ['RECOVERED'],
+      'RELEASED': ['CLOSED'],
+      'DECEASED': ['CLOSED']
+    };
+
+    function updateStatusOptions() {
+      const selectedStage = stageSelect.value;
+      const allowedStatuses = validMapping[selectedStage] || [];
+      let currentVal = statusSelect.value;
+      let isCurrentValid = false;
+
+      Array.from(statusSelect.options).forEach(opt => {
+        if (opt.value === "") return; // Skip placeholder
+        
+        if (allowedStatuses.includes(opt.value)) {
+          opt.hidden = false;
+          opt.disabled = false;
+          if (opt.value === currentVal) isCurrentValid = true;
+        } else {
+          opt.hidden = true;
+          opt.disabled = true;
+        }
+      });
+
+      if (!isCurrentValid && allowedStatuses.length > 0) {
+        statusSelect.value = ''; // Clear selection
+      }
+    }
+
+    stageSelect.addEventListener('change', updateStatusOptions);
+    updateStatusOptions();
+  });
+</script>
+{% endif %}
+{% endblock %}
