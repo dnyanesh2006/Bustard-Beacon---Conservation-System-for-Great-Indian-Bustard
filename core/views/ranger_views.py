@@ -12,8 +12,10 @@ from ..models import (
 from ..services.gis_service import detect_zone_for_point
 from ..services.weather_service import get_weather_at_coordinates
 from ..services.audit_service import log_activity
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from ..decorators import role_required
+from ..validators import validate_uploaded_document
 
 MAX_INCIDENT_IMAGE_SIZE = 10 * 1024 * 1024
 ALLOWED_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
@@ -72,7 +74,9 @@ def report_incident(request):
         accuracy_raw = request.POST.get('accuracy')
         custom_category_name = request.POST.get('custom_category', '').strip()
         priority = request.POST.get('priority')
-        bird_id = request.POST.get('bird_id')
+        bird_id = request.POST.get('bird_id', '').strip()
+        send_medical = (request.POST.get('send_medical_alert') or '').strip().lower()
+        medical_team_id = request.POST.get('medical_team_id')
         photo_files = request.FILES.getlist('photo_upload')
         captured_image_data = request.POST.get('captured_image_data')
 
@@ -91,13 +95,30 @@ def report_incident(request):
             except Exception:
                 pass
 
+        def _get_err_context():
+            return {
+                'category_preset': category,
+                'edit_incident': edit_incident,
+                'medical_teams': UserProfile.objects.filter(role=ROLE_MEDICAL_TEAM, user__is_active=True),
+                'registered_birds': Bustard.objects.exclude(health_status='DECEASED').order_by('tag_id'),
+                'entered_description': description,
+                'entered_custom_category': custom_category_name,
+                'entered_latitude': latitude_raw or '',
+                'entered_longitude': longitude_raw or '',
+                'entered_accuracy': accuracy_raw or '',
+                'selected_bird_id': bird_id or '',
+                'send_medical_preset': send_medical == 'true',
+                'selected_medical_team_id': medical_team_id or '',
+                'google_maps_api_key': getattr(settings, 'GOOGLE_MAPS_API_KEY', ''),
+            }
+
         if not description:
             messages.error(request, "Please provide a description of the observation/incident.")
-            return render(request, 'ranger/report_incident.html', {'category_preset': category})
+            return render(request, 'ranger/report_incident.html', _get_err_context())
 
         if not latitude_raw or not longitude_raw:
             messages.error(request, "GPS coordinates are required. Please enable location services.")
-            return render(request, 'ranger/report_incident.html', {'category_preset': category})
+            return render(request, 'ranger/report_incident.html', _get_err_context())
 
         try:
             latitude = float(latitude_raw)
@@ -105,20 +126,21 @@ def report_incident(request):
             accuracy = float(accuracy_raw) if accuracy_raw else None
         except (TypeError, ValueError):
             messages.error(request, "Invalid GPS coordinate format received.")
-            return render(request, 'ranger/report_incident.html', {'category_preset': category})
+            return render(request, 'ranger/report_incident.html', _get_err_context())
 
         valid_categories = {value for value, _label in Incident.CATEGORY_CHOICES}
         if category not in valid_categories:
             messages.error(request, "Please select a valid incident category.")
-            return render(request, 'ranger/report_incident.html', {'category_preset': 'BIRD_SIGHTING'})
+            category = 'BIRD_SIGHTING'
+            return render(request, 'ranger/report_incident.html', _get_err_context())
 
         if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
             messages.error(request, "GPS coordinates are outside the valid latitude/longitude range.")
-            return render(request, 'ranger/report_incident.html', {'category_preset': category})
+            return render(request, 'ranger/report_incident.html', _get_err_context())
 
         if accuracy is not None and (accuracy < 0 or accuracy > 100000):
             messages.error(request, "GPS accuracy is invalid. Please refresh the device location.")
-            return render(request, 'ranger/report_incident.html', {'category_preset': category})
+            return render(request, 'ranger/report_incident.html', _get_err_context())
 
         if photo_files:
             for photo_file in photo_files:
@@ -126,10 +148,7 @@ def report_incident(request):
                     _validate_incident_image(photo_file)
                 except ValidationError as error:
                     messages.error(request, error.message)
-                    return render(request, 'ranger/report_incident.html', {'category_preset': category})
-        
-        send_medical = request.POST.get('send_medical_alert')
-        medical_team_id = request.POST.get('medical_team_id')
+                    return render(request, 'ranger/report_incident.html', _get_err_context())
         
         # Automatically assign CRITICAL priority for medical incidents.
         # Rangers no longer manually select priority.
@@ -137,18 +156,23 @@ def report_incident(request):
             priority = 'CRITICAL'
         else:
             priority = 'MEDIUM'
+
         bustard = None
         bird_id_text = request.POST.get('bird_id', '').strip()
-        if bird_id_text:
-            try:
-                # Search the existing Great Indian Bustard database
-                bustard = Bustard.objects.get(tag_id__iexact=bird_id_text)
-                if bustard.health_status == 'DECEASED':
-                    messages.error(request, f"The selected bird ({bustard.tag_id}) is confirmed deceased and cannot be assigned to new field reports.")
-                    return redirect(f"/ranger/report-incident/?category={category}")
-            except Bustard.DoesNotExist:
-                # If does not exist, treat as Unknown Bird
-                bustard = None
+        if bird_id_text and bird_id_text.upper() != 'UNKNOWN':
+            # Authoritative backend validation against database
+            found_bird = Bustard.objects.filter(tag_id__iexact=bird_id_text).first()
+            if not found_bird:
+                messages.error(request, f"The selected Bird ID '{bird_id_text}' does not exist in the database. Please select a registered living bird or 'Unknown Bird'.")
+                return render(request, 'ranger/report_incident.html', _get_err_context())
+            elif found_bird.health_status == 'DECEASED':
+                messages.error(request, f"The selected bird ({found_bird.tag_id}) is confirmed deceased and cannot be assigned to new field reports.")
+                return render(request, 'ranger/report_incident.html', _get_err_context())
+            else:
+                bustard = found_bird
+        else:
+            # Explicit Unknown Bird selected or left blank
+            bustard = None
 
         # Atomic Transaction for Data Consistency
         try:
@@ -285,9 +309,8 @@ def report_incident(request):
             messages.error(request, "The incident could not be saved. Please retry, or contact an administrator if the problem continues.")
 
     medical_teams = UserProfile.objects.filter(role=ROLE_MEDICAL_TEAM, user__is_active=True)
-    registered_birds = Bustard.objects.exclude(health_status='DECEASED')
+    registered_birds = Bustard.objects.exclude(health_status='DECEASED').order_by('tag_id')
     
-    from django.conf import settings
     context = {
         'category_preset': category_preset,
         'medical_teams': medical_teams,
@@ -398,6 +421,11 @@ def ranger_assignments(request):
         if evidence_files:
             from ..models import AssignmentAttachment
             for f in evidence_files:
+                try:
+                    validate_uploaded_document(f)
+                except ValidationError as err:
+                    messages.error(request, err.message)
+                    return redirect('ranger_assignments')
                 AssignmentAttachment.objects.create(assignment=assignment, file=f)
                 
         log_activity(request.user, "UPDATE", f"Ranger updated assignment #{assignment.id} status to {new_status}", model_name="PatrolAssignment", object_id=assignment.id, request=request)

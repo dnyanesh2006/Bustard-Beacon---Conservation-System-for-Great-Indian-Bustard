@@ -237,16 +237,16 @@
         <div class="p-3 rounded border border-secondary" style="background-color: var(--bg-secondary);">
           <div class="mb-3">
             <div class="small fw-bold text-secondary">Current Rehabilitation Stage</div>
-            <div class="fw-bold text-light">{{ case.get_rehabilitation_stage_display }}</div>
+            <div class="fw-bold" style="color: var(--text-primary);">{{ case.get_rehabilitation_stage_display }}</div>
           </div>
           <div class="mb-3">
             <div class="small fw-bold text-secondary">Case Status</div>
-            <div class="fw-bold text-warning">{{ case.get_status_display }}</div>
+            <div class="fw-bold" style="color: var(--primary-forest);">{{ case.get_status_display }}</div>
           </div>
           {% if case.rehabilitation_stage == 'DECEASED' %}
           <div class="mb-3 p-2 border border-danger rounded bg-dark">
             <div class="small fw-bold text-danger mb-1"><i class="bi bi-exclamation-triangle-fill"></i> Death Details</div>
-            <div class="small text-light">
+            <div class="small text-white">
               <div class="mb-1"><strong>Time recorded:</strong> {{ case.updated_at|date:"Y-m-d H:i" }}</div>
               <div><strong>Cause of death:</strong> {% if case.diagnosis %}{{ case.diagnosis }}{% else %}<span class="fst-italic text-muted">Unknown / Not Recorded</span>{% endif %}</div>
             </div>
@@ -255,7 +255,7 @@
           <div>
             <div class="small fw-bold text-secondary">Recovery Observations & Examination Findings</div>
             {% if case.diagnosis %}
-              <div class="text-light small mt-1">{{ case.diagnosis }}</div>
+              <div class="small mt-1" style="color: var(--text-primary);">{{ case.diagnosis }}</div>
             {% else %}
               <div class="text-muted small fst-italic mt-1">No recovery observations or examination findings recorded yet.</div>
             {% endif %}

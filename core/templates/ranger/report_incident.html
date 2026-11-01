@@ -18,9 +18,9 @@
       {% endif %}
 
       <!-- Hidden GPS inputs -->
-      <input type="hidden" name="latitude" id="field-latitude">
-      <input type="hidden" name="longitude" id="field-longitude">
-      <input type="hidden" name="accuracy" id="field-accuracy">
+      <input type="hidden" name="latitude" id="field-latitude" value="{% if entered_latitude %}{{ entered_latitude }}{% endif %}">
+      <input type="hidden" name="longitude" id="field-longitude" value="{% if entered_longitude %}{{ entered_longitude }}{% endif %}">
+      <input type="hidden" name="accuracy" id="field-accuracy" value="{% if entered_accuracy %}{{ entered_accuracy }}{% endif %}">
 
       <!-- Category Select -->
       <div class="mb-3">
@@ -38,23 +38,32 @@
 
 
 
-      <!-- Bird ID Select (Hidden by default, shown for medical alerts) -->
+      <!-- Bird ID Select (Dynamic living birds from DB + explicit Unknown Bird) -->
       <div class="mb-3" id="bird-id-container" style="display: none;">
-        <label class="form-label small fw-bold" style="color: var(--text-secondary);">Identified Bird ID</label>
-        <input type="text" name="bird_id" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Enter Bird ID (e.g., MED-2026-B3F)">
-        <div class="form-text small" style="color: var(--text-muted);">Enter if you can positively identify the bird. Leave blank for Unknown Bird.</div>
+        <label for="bird_id_select" class="form-label small fw-bold" style="color: var(--text-secondary);"><i class="bi bi-tag-fill text-warning me-1"></i> Identified Bird ID</label>
+        <select name="bird_id" id="bird_id_select" class="form-select border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
+          <option value="UNKNOWN" {% if not selected_bird_id or selected_bird_id == 'UNKNOWN' %}selected{% endif %}>-- Unknown Bird (Unidentified) --</option>
+          {% for bird in registered_birds %}
+            <option value="{{ bird.tag_id }}" {% if selected_bird_id == bird.tag_id or edit_incident.bustard.tag_id == bird.tag_id %}selected{% endif %}>
+              {{ bird.tag_id }}{% if bird.name %} ({{ bird.name }}){% endif %} — {{ bird.get_health_status_display }}
+            </option>
+          {% empty %}
+            <!-- No registered living birds in catalog -->
+          {% endfor %}
+        </select>
+        <div class="form-text small" style="color: var(--text-muted);">Choose a living registered Great Indian Bustard from the database, or select 'Unknown Bird' if unidentified.</div>
       </div>
 
       <!-- Custom Report Type Input (Hidden by default) -->
       <div class="mb-3" id="custom-type-container" style="display: none;">
         <label class="form-label small fw-bold" style="color: var(--text-secondary);">Action / Report Type</label>
-        <input type="text" name="custom_category" id="custom-category-input" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Specify action or report type">
+        <input type="text" name="custom_category" id="custom-category-input" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Specify action or report type" value="{% if entered_custom_category %}{{ entered_custom_category }}{% elif edit_incident %}{{ edit_incident.custom_category_name }}{% endif %}">
       </div>
 
       <!-- Medical Alert Container (Hidden by default) -->
       <div class="mb-3 p-3 rounded border border-danger" id="medical-alert-container" style="display: none; background-color: rgba(220, 53, 69, 0.1);">
         <div class="form-check form-switch mb-2">
-          <input class="form-check-input" type="checkbox" id="send_medical_alert" name="send_medical_alert" value="true">
+          <input class="form-check-input" type="checkbox" id="send_medical_alert" name="send_medical_alert" value="true" {% if send_medical_preset %}checked{% endif %}>
           <label class="form-check-label fw-bold text-danger" for="send_medical_alert">Medical Treatment Required</label>
         </div>
         <div id="medical-team-selection" style="display: none;">
@@ -138,8 +147,8 @@
 
       <!-- Incident Description -->
       <div class="mb-4">
-        <label class="form-label small fw-bold" style="color: var(--text-secondary);">Field Description & Details</label>
-        <textarea name="description" rows="3" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Provide observation details, bird count, physical condition, behavior..." required>{% if edit_incident %}{{ edit_incident.description }}{% endif %}</textarea>
+        <label class="form-label small fw-bold" style="color: var(--text-secondary);">Field Description & Details <span class="text-danger">*</span></label>
+        <textarea name="description" rows="3" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="Provide observation details, bird count, physical condition, behavior..." required>{% if entered_description is not None %}{{ entered_description }}{% elif edit_incident %}{{ edit_incident.description }}{% endif %}</textarea>
       </div>
 
       <button type="submit" class="btn btn-bb-sand w-100 py-3 fw-bold"><i class="bi bi-send-fill me-2"></i> {% if edit_incident %}UPDATE INCIDENT REPORT{% else %}SUBMIT INCIDENT REPORT{% endif %}</button>
@@ -180,10 +189,16 @@
           if (val === 'INJURED_BIRD' || val === 'SICK_BIRD') {
               medicalAlertContainer.style.display = 'block';
               birdIdContainer.style.display = 'block';
+              if (sendMedicalAlertCb.checked) {
+                  medicalTeamSelection.style.display = 'block';
+              }
+          } else if (sendMedicalAlertCb.checked) {
+              medicalAlertContainer.style.display = 'block';
+              birdIdContainer.style.display = 'block';
+              medicalTeamSelection.style.display = 'block';
           } else {
               medicalAlertContainer.style.display = 'none';
               birdIdContainer.style.display = 'none';
-              sendMedicalAlertCb.checked = false;
               medicalTeamSelection.style.display = 'none';
               document.querySelectorAll('input[name="medical_team_id"]').forEach(el => el.checked = false);
           }
@@ -191,6 +206,11 @@
       
       sendMedicalAlertCb.addEventListener('change', function() {
           medicalTeamSelection.style.display = this.checked ? 'block' : 'none';
+          if (this.checked) {
+              birdIdContainer.style.display = 'block';
+          } else if (categorySelect.value !== 'INJURED_BIRD' && categorySelect.value !== 'SICK_BIRD') {
+              birdIdContainer.style.display = 'none';
+          }
           if (!this.checked) {
               document.querySelectorAll('input[name="medical_team_id"]').forEach(el => el.checked = false);
           }

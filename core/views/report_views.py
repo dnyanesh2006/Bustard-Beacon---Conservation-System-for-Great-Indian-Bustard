@@ -33,16 +33,17 @@ def parse_date_range_safely(date_from_str, date_to_str):
     dt_to = None
     error = None
 
-    if date_from_str:
+    if date_from_str and date_from_str.strip():
         try:
             dt_from = datetime.strptime(date_from_str.strip(), "%Y-%m-%d").date()
         except ValueError:
-            pass
-    if date_to_str:
+            return None, None, f"Invalid 'From Date' format ('{date_from_str}'). Please use YYYY-MM-DD."
+
+    if date_to_str and date_to_str.strip():
         try:
             dt_to = datetime.strptime(date_to_str.strip(), "%Y-%m-%d").date()
         except ValueError:
-            pass
+            return None, None, f"Invalid 'To Date' format ('{date_to_str}'). Please use YYYY-MM-DD."
 
     if dt_from and dt_to and dt_from > dt_to:
         error = "Start date cannot be later than end date."

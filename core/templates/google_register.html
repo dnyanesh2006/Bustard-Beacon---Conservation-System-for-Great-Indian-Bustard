@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Request Account - BUSTARD BEACON{% endblock %}
+{% block title %}Request Account — BUSTARD BEACON{% endblock %}
 
 {% block content %}
 <div class="container my-5" style="max-width: 600px;">
@@ -13,21 +13,21 @@
         </div>
 
         <div class="p-4 text-center">
-          <p class="text-secondary mb-4">No staff account was found matching the verified Google identity:</p>
+          <p class="mb-3" style="color: var(--text-secondary);">No active staff profile was found for this verified Google identity:</p>
           
-          <div class="alert alert-dark border-secondary text-light fw-bold mb-4">
-            {{ email }}
+          <div class="alert alert-secondary border fw-bold mb-4" style="color: var(--text-primary); background-color: var(--bg-secondary);">
+            <i class="bi bi-envelope-at me-1"></i> {{ email }}
           </div>
           
-          <p class="text-light mb-4">
-            Would you like to request a new BUSTARD BEACON account using this Google identity?<br>
-            <span class="text-warning small">Note: Your account will remain pending until approved and assigned a role by an Administrator.</span>
+          <p class="mb-4" style="color: var(--text-primary);">
+            Would you like to request an official BUSTARD BEACON staff account using this Google account?<br>
+            <span class="small fw-semibold d-block mt-1" style="color: #b45309;">Note: Your request will remain pending until approved and assigned an operational role by a System Administrator.</span>
           </p>
 
           <form method="POST" action="{% url 'google_register' %}">
             {% csrf_token %}
             <div class="d-flex justify-content-center gap-3">
-              <a href="{% url 'login' %}" class="btn btn-outline-secondary px-4 fw-bold">Cancel</a>
+              <a href="{% url 'login' %}" class="btn btn-outline-dark px-4 fw-bold">Cancel</a>
               <button type="submit" class="btn btn-bb-sand px-4 fw-bold">Request Account <i class="bi bi-arrow-right-short"></i></button>
             </div>
           </form>

@@ -604,3 +604,11 @@ h1, h2, h3, h4, h5, h6, .brand-font {
     padding: 10px 16px !important;
   }
 }
+
+/* Dashboard Dropdown Desktop Hover-to-Open */
+@media (min-width: 992px) {
+  .bb-navbar .bb-dashboard-dropdown:hover > .dropdown-menu {
+    display: block;
+    margin-top: 0;
+  }
+}

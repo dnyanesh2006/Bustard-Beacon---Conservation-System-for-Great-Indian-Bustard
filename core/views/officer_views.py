@@ -11,6 +11,7 @@ from ..services.gis_service import calculate_high_risk_zones
 from ..services.audit_service import log_activity
 from ..decorators import role_required
 from .report_views import parse_date_range_safely, filter_datetime_range
+from ..validators import validate_indian_mobile, validate_email_address, validate_date_string
 
 @role_required(ROLE_FOREST_OFFICER)
 def officer_dashboard(request):
@@ -100,14 +101,23 @@ def officer_incident_detail(request, incident_id):
                 notif_message = ""
                 
                 if new_status == 'MORE_INFO':
-                    # If they explicitly chose a different ranger while requesting info, that's weird but possible.
-                    # Usually it goes back to the reporter.
-                    target_ranger = get_object_or_404(User, id=ranger_id) if ranger_id else incident.reporter
+                    if ranger_id:
+                        try:
+                            target_ranger = User.objects.get(id=ranger_id, profile__role=ROLE_RANGER, is_active=True)
+                        except (User.DoesNotExist, ValueError):
+                            messages.error(request, "Selected Ranger is invalid or inactive.")
+                            return redirect('officer_incident_detail', incident_id=incident.id)
+                    else:
+                        target_ranger = incident.reporter
                     instruction_prefix = "Information Request: "
                     notif_title = f"Information Requested: Incident {incident.incident_id}"
                     notif_message = f"Officer {request.user.username} requested more info: {notes}"
                 else:
-                    target_ranger = get_object_or_404(User, id=ranger_id)
+                    try:
+                        target_ranger = User.objects.get(id=ranger_id, profile__role=ROLE_RANGER, is_active=True)
+                    except (User.DoesNotExist, ValueError):
+                        messages.error(request, "Selected Ranger is invalid or inactive.")
+                        return redirect('officer_incident_detail', incident_id=incident.id)
                     instruction_prefix = ""
                     notif_title = f"Patrol Task Assigned: {incident.incident_id}"
                     notif_message = f"Officer {request.user.username} assigned you a patrol task."
@@ -219,18 +229,27 @@ def officer_zones(request):
         color_hex = request.POST.get('color_hex', '#2e7d32')
         description = request.POST.get('description', '').strip()
 
-        if name and code:
-            zone = ConservationZone.objects.create(
-                name=name,
-                code=code,
-                zone_type=zone_type,
-                color_hex=color_hex,
-                description=description,
-                responsible_officer=request.user
-            )
-            log_activity(request.user, "CREATE", f"Created conservation zone {zone.name} ({zone.code})", model_name="ConservationZone", object_id=zone.id, request=request)
-            messages.success(request, f"Zone '{zone.name}' created.")
+        if not name:
+            messages.error(request, "Zone name is required.")
             return redirect('officer_zones')
+        if not code:
+            messages.error(request, "Zone code is required.")
+            return redirect('officer_zones')
+        if ConservationZone.objects.filter(code__iexact=code).exists():
+            messages.error(request, f"Zone code '{code}' already exists.")
+            return redirect('officer_zones')
+
+        zone = ConservationZone.objects.create(
+            name=name,
+            code=code,
+            zone_type=zone_type,
+            color_hex=color_hex,
+            description=description,
+            responsible_officer=request.user
+        )
+        log_activity(request.user, "CREATE", f"Created conservation zone {zone.name} ({zone.code})", model_name="ConservationZone", object_id=zone.id, request=request)
+        messages.success(request, f"Zone '{zone.name}' created.")
+        return redirect('officer_zones')
 
     return render(request, 'officer/zones.html', {'zones': zones})
 
@@ -264,6 +283,16 @@ def officer_tourism(request):
                 errors.append("Visitor / Group name is required.")
             if not purpose_of_visit:
                 errors.append("Purpose of visit is required.")
+
+            if contact_phone:
+                phone_err = validate_indian_mobile(contact_phone)
+                if phone_err:
+                    errors.append(f"Contact Phone: {phone_err}")
+
+            if contact_email:
+                email_err = validate_email_address(contact_email)
+                if email_err:
+                    errors.append(f"Contact Email: {email_err}")
 
             try:
                 visitor_count = int(visitor_count_str)
@@ -318,7 +347,27 @@ def officer_tourism(request):
             valid_from = request.POST.get('valid_from', timezone.now().strftime('%Y-%m-%d'))
             valid_until = request.POST.get('valid_until') or None
 
-            zone = get_object_or_404(ConservationZone, id=zone_id)
+            try:
+                zone = ConservationZone.objects.get(id=zone_id)
+            except (ConservationZone.DoesNotExist, ValueError):
+                messages.error(request, "Selected Conservation Zone does not exist.")
+                return redirect('officer_tourism')
+
+            if valid_from:
+                vf_err = validate_date_string(valid_from, "Valid From Date", allow_future=True)
+                if vf_err:
+                    messages.error(request, vf_err)
+                    return redirect('officer_tourism')
+
+            if valid_until:
+                vu_err = validate_date_string(valid_until, "Valid Until Date", allow_future=True)
+                if vu_err:
+                    messages.error(request, vu_err)
+                    return redirect('officer_tourism')
+                if valid_from and valid_until < valid_from:
+                    messages.error(request, "Valid Until date cannot be earlier than Valid From date.")
+                    return redirect('officer_tourism')
+
             tr = TourismRestriction.objects.create(
                 zone=zone,
                 status=status,

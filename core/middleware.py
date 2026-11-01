@@ -58,6 +58,29 @@ class MultiRoleAuthMiddleware:
                 else:
                     active_role = 'RESEARCHER'
 
+        # If still not set, inspect HTTP_REFERER for multi-tab link opening
+        if not active_role and path not in ['/login/', '/logout/', '/']:
+            referer = request.META.get('HTTP_REFERER', '')
+            if '/admin-panel/' in referer:
+                active_role = 'ADMIN'
+            elif '/ranger/' in referer:
+                active_role = 'RANGER'
+            elif '/officer/' in referer:
+                active_role = 'FOREST_OFFICER'
+            elif '/medical/' in referer:
+                active_role = 'MEDICAL_TEAM'
+            elif '/research/' in referer:
+                active_role = 'RESEARCHER'
+            elif 'active_role=' in referer:
+                import urllib.parse
+                parsed = urllib.parse.urlparse(referer)
+                qs = urllib.parse.parse_qs(parsed.query)
+                ref_role = qs.get('active_role', [None])[0]
+                if ref_role:
+                    active_role = ref_role.upper()
+            if not active_role and 'last_active_role' in request.session:
+                active_role = request.session.get('last_active_role')
+
         # If we have an active role, override request.user for true isolation
         if active_role:
             original_user = request.user
@@ -84,10 +107,33 @@ class MultiRoleAuthMiddleware:
                     request.user = original_user
 
         elif path == '/login/':
-            # Do NOT use global authenticated user for login to permit role selection in new tabs
-            request.user = AnonymousUser()
+            role_param = (request.GET.get('role') or request.GET.get('login_role') or '').lower()
+            role_map = {
+                'admin': 'ADMIN',
+                'officer': 'FOREST_OFFICER',
+                'ranger': 'RANGER',
+                'medical': 'MEDICAL_TEAM',
+                'researcher': 'RESEARCHER',
+            }
+            target_role = role_map.get(role_param)
+            role_sessions = request.session.get('role_sessions', {})
+            if target_role and target_role in role_sessions:
+                User = get_user_model()
+                session_data = role_sessions[target_role]
+                try:
+                    user = User.objects.get(pk=session_data['user_id'])
+                    auth_hash = session_data.get('hash')
+                    if auth_hash is None or user.get_session_auth_hash() == auth_hash:
+                        request.user = user
+                except User.DoesNotExist:
+                    pass
 
-        return self.get_response(request)
+        response = self.get_response(request)
+        if request.user.is_authenticated or path.startswith(('/admin-panel/', '/ranger/', '/officer/', '/medical/', '/research/', '/profile/', '/password-change/')):
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+        return response
 
 class EnforceActiveUserMiddleware:
     def __init__(self, get_response):

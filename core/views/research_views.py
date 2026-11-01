@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Count, Q
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, timedelta
 from ..models import (
     Incident, BustardMovement, ConservationZone, IncidentLocation, MedicalCase,
     ROLE_RESEARCHER, ROLE_FOREST_OFFICER, ROLE_ADMIN, ConservationReport, UserProfile, Notification
@@ -20,12 +20,19 @@ def parse_date_range(request):
     to_date_str = request.GET.get('to_date') or request.POST.get('to_date')
 
     if from_date_str:
-        from_date = datetime.strptime(from_date_str, '%Y-%m-%d').date()
+        try:
+            from_date = datetime.strptime(from_date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            from_date = (now - timedelta(days=30)).date()
     else:
-        from_date = now.replace(day=1).date()
+        # Default to a rolling 30-day window so dashboards always show rich comparative data
+        from_date = (now - timedelta(days=30)).date()
 
     if to_date_str:
-        to_date = datetime.strptime(to_date_str, '%Y-%m-%d').date()
+        try:
+            to_date = datetime.strptime(to_date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            to_date = now.date()
     else:
         to_date = now.date()
         
@@ -33,7 +40,7 @@ def parse_date_range(request):
 
 def get_base_incidents(from_date, to_date):
     return Incident.objects.filter(
-        status='VERIFIED',
+        status__in=['VERIFIED', 'RESOLVED'],
         reported_at__date__gte=from_date,
         reported_at__date__lte=to_date
     )
@@ -212,10 +219,13 @@ def research_report_submit(request, report_id, target):
     report_url = reverse('research_reports')
     return redirect(f"{report_url}?from_date={report.period_start.strftime('%Y-%m-%d')}&to_date={report.period_end.strftime('%Y-%m-%d')}")
 
-@role_required(ROLE_RESEARCHER)
+@role_required(ROLE_RESEARCHER, ROLE_FOREST_OFFICER, ROLE_ADMIN)
 def api_analytics_data(request):
     from_date, to_date = parse_date_range(request)
-    incidents = get_base_incidents(from_date, to_date)
+    incidents = Incident.objects.filter(
+        reported_at__date__gte=from_date,
+        reported_at__date__lte=to_date
+    ).exclude(status='REJECTED')
     
     # 1. Incident Categories Breakdown
     cat_counts = incidents.values('category').annotate(total=Count('id'))
@@ -235,8 +245,12 @@ def api_analytics_data(request):
     pri_labels = [p['priority'].title() for p in pri_counts]
     pri_data = [p['total'] for p in pri_counts]
 
-    # Medical Graph Data
-    medical_cases = MedicalCase.objects.filter(created_at__date__gte=from_date, created_at__date__lte=to_date)
+    # Medical Graph Data: Includes cases active in period or created/updated in window
+    medical_cases = MedicalCase.objects.filter(
+        Q(created_at__date__gte=from_date, created_at__date__lte=to_date) |
+        Q(status__in=['ACTIVE', 'UNDER_TREATMENT', 'REHABILITATION']) |
+        Q(updated_at__date__gte=from_date, updated_at__date__lte=to_date)
+    ).distinct()
     med_counts = medical_cases.values('status').annotate(total=Count('id', distinct=True))
     
     # We want these specific actual status values + zero counts where appropriate

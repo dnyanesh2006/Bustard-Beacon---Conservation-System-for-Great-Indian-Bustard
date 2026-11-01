@@ -101,6 +101,9 @@ else:
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
+            'OPTIONS': {
+                'timeout': 30,
+            },
         }
     }
 
@@ -139,11 +142,44 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
+AUTHENTICATION_BACKENDS = [
+    'core.backends.EmailOrUsernameModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# Email / MAILERS Configuration (Django 6+ Modern Email System)
+_EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', '')
+_EMAIL_HOST = os.getenv('EMAIL_HOST', '')
+_EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+_EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+_EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() in ('true', '1', 'yes')
+_EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+_EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+
+if not _EMAIL_BACKEND:
+    if _EMAIL_HOST and _EMAIL_HOST_USER:
+        _EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    else:
+        _EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
 MAILERS = {
     'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        'BACKEND': _EMAIL_BACKEND,
+        'OPTIONS': {
+            'host': _EMAIL_HOST,
+            'port': _EMAIL_PORT,
+            'username': _EMAIL_HOST_USER,
+            'password': _EMAIL_HOST_PASSWORD,
+            'use_tls': _EMAIL_USE_TLS,
+            'use_ssl': _EMAIL_USE_SSL,
+        } if 'smtp' in _EMAIL_BACKEND.lower() else {},
     },
 }
+
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', _EMAIL_HOST_USER or 'noreply@bustardbeacon.gov.in')
+
+# Password Reset Token Expiry (24 hours in seconds)
+PASSWORD_RESET_TIMEOUT = 86400
 
 # Google API Credentials
 GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY', '')

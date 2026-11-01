@@ -82,11 +82,11 @@
           </li>
           
           {% if user.is_authenticated %}
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle text-dark fw-bold px-3" href="#" role="button" data-bs-toggle="dropdown">
+            <li class="nav-item dropdown bb-dashboard-dropdown">
+              <a class="nav-link dropdown-toggle text-dark fw-bold px-3" href="#" role="button" data-bs-toggle="dropdown" id="navDashboardDropdown" aria-expanded="false">
                 <i class="bi bi-speedometer2 text-warning me-1"></i> My Dashboard
               </a>
-              <ul class="dropdown-menu shadow-sm border-light-subtle">
+              <ul class="dropdown-menu shadow-sm border-light-subtle" aria-labelledby="navDashboardDropdown">
               {% if user_role == ROLE_RANGER %}
                 <li><a class="dropdown-item" href="{% url 'ranger_field_mode' %}?active_role={{ user_role }}"><i class="bi bi-phone"></i> FIELD MODE</a></li>
                 <li><a class="dropdown-item" href="{% url 'ranger_assignments' %}?active_role={{ user_role }}"><i class="bi bi-card-checklist"></i> My Tasks</a></li>
@@ -131,11 +131,17 @@
             
             <div class="dropdown">
               <button class="btn btn-bb-forest btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
-                <i class="bi bi-person-circle"></i> {{ user.get_full_name|default:user.username }}
+                {% if user_profile.profile_image %}
+                  <img src="{{ user_profile.profile_image.url }}" alt="Avatar" class="rounded-circle" style="width: 24px; height: 24px; object-fit: cover; border: 1.5px solid var(--sand-accent); vertical-align: middle;">
+                {% else %}
+                  <i class="bi bi-person-circle"></i>
+                {% endif %}
+                <span>{{ user.get_full_name|default:user.username }}</span>
               </button>
               <ul class="dropdown-menu dropdown-menu-end shadow-sm border-light-subtle">
-                <li><span class="dropdown-item-text text-warning small fw-bold">{{ user_profile.get_role_display|default:"System User" }}</span></li>
+                <li><span class="dropdown-item-text small fw-bold" style="color: var(--primary-forest);">{{ user_profile.get_role_display|default:"System User" }}</span></li>
                 <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'login' %}"><i class="bi bi-box-arrow-in-right"></i> Staff Login / Switch Role</a></li>
                 <li><a class="dropdown-item" href="{% url 'profile' %}?active_role={{ user_role }}"><i class="bi bi-person-gear"></i> Profile & Settings</a></li>
                 <li><a class="dropdown-item" href="{% url 'password_change' %}?active_role={{ user_role }}"><i class="bi bi-key"></i> Change Password</a></li>
                 <li><a class="dropdown-item" href="{% url 'dashboard' %}?active_role={{ user_role }}"><i class="bi bi-speedometer"></i> My Role Dashboard</a></li>
@@ -144,9 +150,21 @@
               </ul>
             </div>
           {% else %}
-            <a href="{% url 'login' %}" class="btn btn-bb-sand btn-sm px-4 fw-bold shadow-sm">
-              Staff Login <i class="bi bi-box-arrow-in-right ms-1"></i>
-            </a>
+            <div class="dropdown">
+              <button class="btn btn-bb-sand btn-sm px-4 fw-bold shadow-sm dropdown-toggle" type="button" id="navStaffLoginDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                Staff Login <i class="bi bi-box-arrow-in-right ms-1"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm border-light-subtle py-2" aria-labelledby="navStaffLoginDropdown">
+                <li><span class="dropdown-header text-uppercase fw-bold text-muted small">Select Operational Role</span></li>
+                <li><a class="dropdown-item py-2" href="{% url 'login' %}?role=admin"><i class="bi bi-shield-lock-fill text-danger me-2"></i> System Administrator</a></li>
+                <li><a class="dropdown-item py-2" href="{% url 'login' %}?role=officer"><i class="bi bi-person-badge-fill text-success me-2"></i> Forest Officer</a></li>
+                <li><a class="dropdown-item py-2" href="{% url 'login' %}?role=ranger"><i class="bi bi-compass-fill text-warning me-2"></i> Field Ranger</a></li>
+                <li><a class="dropdown-item py-2" href="{% url 'login' %}?role=medical"><i class="bi bi-heart-pulse-fill text-danger me-2"></i> Veterinary Medical Team</a></li>
+                <li><a class="dropdown-item py-2" href="{% url 'login' %}?role=researcher"><i class="bi bi-graph-up-arrow text-info me-2"></i> Wildlife Researcher</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item py-1 small text-muted text-center" href="{% url 'login' %}">All Login Options &rarr;</a></li>
+              </ul>
+            </div>
           {% endif %}
         </div>
       </div>
@@ -267,6 +285,31 @@
   {% if user.is_authenticated %}
   <script>
     document.addEventListener("DOMContentLoaded", function() {
+      // Desktop Hover-to-Open for Dashboard Dropdown
+      const dashDropdown = document.querySelector('.bb-dashboard-dropdown');
+      if (dashDropdown && window.bootstrap) {
+        const toggleBtn = dashDropdown.querySelector('.dropdown-toggle');
+        if (toggleBtn) {
+          const bsDropdown = bootstrap.Dropdown.getOrCreateInstance(toggleBtn);
+          let hoverTimer = null;
+
+          dashDropdown.addEventListener('mouseenter', function() {
+            if (window.matchMedia('(min-width: 992px)').matches) {
+              if (hoverTimer) clearTimeout(hoverTimer);
+              bsDropdown.show();
+            }
+          });
+
+          dashDropdown.addEventListener('mouseleave', function() {
+            if (window.matchMedia('(min-width: 992px)').matches) {
+              hoverTimer = setTimeout(function() {
+                bsDropdown.hide();
+              }, 150);
+            }
+          });
+        }
+      }
+
       function checkNotifications() {
         fetch("{% url 'api_unread_notifications_count' %}")
           .then(response => response.json())

@@ -227,30 +227,77 @@ def medical_equipment(request):
         if action == 'add':
             name = request.POST.get('name', '').strip()
             category = request.POST.get('category', '').strip()
-            quantity_available = int(request.POST.get('quantity_available', 1))
-            quantity_in_use = int(request.POST.get('quantity_in_use', 0))
             status = request.POST.get('status', 'OPERATIONAL')
 
-            if name:
-                eq = MedicalEquipment.objects.create(
-                    name=name,
-                    category=category,
-                    quantity_available=quantity_available,
-                    quantity_in_use=quantity_in_use,
-                    status=status,
-                    last_inspected=timezone.now().date()
-                )
-                log_activity(request.user, "CREATE", f"Added medical equipment '{eq.name}'", model_name="MedicalEquipment", object_id=eq.id, request=request)
-                messages.success(request, f"Equipment '{eq.name}' added to inventory.")
+            if not name:
+                messages.error(request, "Equipment name is required.")
                 return redirect('medical_equipment')
+
+            try:
+                quantity_available = int(request.POST.get('quantity_available', 1))
+                if quantity_available < 0:
+                    messages.error(request, "Available quantity cannot be negative.")
+                    return redirect('medical_equipment')
+            except (ValueError, TypeError):
+                messages.error(request, "Available quantity must be a valid non-negative integer.")
+                return redirect('medical_equipment')
+
+            try:
+                quantity_in_use = int(request.POST.get('quantity_in_use', 0))
+                if quantity_in_use < 0:
+                    messages.error(request, "In-use quantity cannot be negative.")
+                    return redirect('medical_equipment')
+            except (ValueError, TypeError):
+                messages.error(request, "In-use quantity must be a valid non-negative integer.")
+                return redirect('medical_equipment')
+
+            eq = MedicalEquipment.objects.create(
+                name=name,
+                category=category,
+                quantity_available=quantity_available,
+                quantity_in_use=quantity_in_use,
+                status=status,
+                last_inspected=timezone.now().date()
+            )
+            log_activity(request.user, "CREATE", f"Added medical equipment '{eq.name}'", model_name="MedicalEquipment", object_id=eq.id, request=request)
+            messages.success(request, f"Equipment '{eq.name}' added to inventory.")
+            return redirect('medical_equipment')
 
         elif action == 'edit':
             eq_id = request.POST.get('eq_id')
-            eq = get_object_or_404(MedicalEquipment, id=eq_id)
-            eq.name = request.POST.get('name', eq.name).strip()
+            try:
+                eq = MedicalEquipment.objects.get(id=eq_id)
+            except (MedicalEquipment.DoesNotExist, ValueError, TypeError):
+                messages.error(request, "Invalid or non-existent equipment record.")
+                return redirect('medical_equipment')
+
+            new_name = request.POST.get('name', '').strip()
+            if not new_name:
+                messages.error(request, "Equipment name cannot be empty.")
+                return redirect('medical_equipment')
+
+            try:
+                qty_avail = int(request.POST.get('quantity_available', eq.quantity_available))
+                if qty_avail < 0:
+                    messages.error(request, "Available quantity cannot be negative.")
+                    return redirect('medical_equipment')
+            except (ValueError, TypeError):
+                messages.error(request, "Available quantity must be a valid non-negative integer.")
+                return redirect('medical_equipment')
+
+            try:
+                qty_use = int(request.POST.get('quantity_in_use', eq.quantity_in_use))
+                if qty_use < 0:
+                    messages.error(request, "In-use quantity cannot be negative.")
+                    return redirect('medical_equipment')
+            except (ValueError, TypeError):
+                messages.error(request, "In-use quantity must be a valid non-negative integer.")
+                return redirect('medical_equipment')
+
+            eq.name = new_name
             eq.category = request.POST.get('category', eq.category).strip()
-            eq.quantity_available = int(request.POST.get('quantity_available', eq.quantity_available))
-            eq.quantity_in_use = int(request.POST.get('quantity_in_use', eq.quantity_in_use))
+            eq.quantity_available = qty_avail
+            eq.quantity_in_use = qty_use
             eq.status = request.POST.get('status', eq.status)
             eq.save()
             log_activity(request.user, "UPDATE", f"Updated equipment '{eq.name}'", model_name="MedicalEquipment", object_id=eq.id, request=request)
@@ -259,7 +306,12 @@ def medical_equipment(request):
 
         elif action == 'delete':
             eq_id = request.POST.get('eq_id')
-            eq = get_object_or_404(MedicalEquipment, id=eq_id)
+            try:
+                eq = MedicalEquipment.objects.get(id=eq_id)
+            except (MedicalEquipment.DoesNotExist, ValueError, TypeError):
+                messages.error(request, "Invalid or non-existent equipment record.")
+                return redirect('medical_equipment')
+
             name = eq.name
             eq.delete()
             log_activity(request.user, "DELETE", f"Deleted equipment '{name}'", model_name="MedicalEquipment", object_id=eq_id, request=request)

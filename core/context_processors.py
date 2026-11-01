@@ -7,11 +7,11 @@ def global_context(request):
     user_profile = None
 
     if request.user.is_authenticated:
-        if hasattr(request.user, 'profile'):
+        try:
             user_profile = request.user.profile
-            user_role = user_profile.role
-        elif request.user.is_superuser:
-            user_role = ROLE_ADMIN
+        except Exception:
+            user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        user_role = user_profile.role if user_profile else (ROLE_ADMIN if request.user.is_superuser else None)
 
         unread_notifications_count = Notification.objects.filter(
             recipient=request.user,

@@ -43,6 +43,7 @@ class UserProfile(models.Model):
     )
     availability_status = models.CharField(max_length=20, choices=AVAILABILITY_CHOICES, default='OFFLINE')
     force_password_change = models.BooleanField(default=False)
+    profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} ({self.get_role_display()})"

@@ -3,76 +3,408 @@
 {% block title %}My Profile & Settings — BUSTARD BEACON{% endblock %}
 
 {% block content %}
-<div class="container my-4" style="max-width: 700px;">
+<div class="container my-4" style="max-width: 720px;">
   <div class="bb-card p-4">
-    <h4 class="text-light brand-font mb-4"><i class="bi bi-person-circle text-warning me-2"></i> Profile & Settings</h4>
-
-    <div class="text-center mb-4">
-      <div style="width:80px; height:80px; border-radius:50%; background:var(--primary-forest); border:3px solid var(--sand-accent); display:inline-flex; align-items:center; justify-content:center; margin:0 auto;">
-        <i class="bi bi-person-fill fs-2 text-light"></i>
-      </div>
-      <div class="mt-2 fw-bold text-light">{{ user.get_full_name|default:user.username }}</div>
-      <div>
-        <span class="badge badge-provenance badge-field-report mt-1">
-          {{ user_profile.get_role_display|default:"Conservation Team Member" }}
-        </span>
-      </div>
-      {% if user_profile.badge_number %}
-        <div class="text-muted small mt-1 font-monospace">Badge: {{ user_profile.badge_number }}</div>
-      {% endif %}
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-light-subtle pb-3">
+      <h4 class="brand-font mb-0" style="color: var(--text-primary);">
+        <i class="bi bi-person-circle text-bb-forest me-2"></i> Profile & Settings
+      </h4>
+      <span class="badge badge-provenance badge-field-report">
+        {{ user_profile.get_role_display|default:"Conservation Staff" }}
+      </span>
     </div>
 
-    <form method="POST" action="{% url 'profile' %}?active_role={{ request.GET.active_role }}">
+    <!-- User Profile Header & Avatar -->
+    <div class="text-center mb-4">
+      <div class="position-relative d-inline-block">
+        <div id="profileAvatarContainer" style="width:104px; height:104px; border-radius:50%; overflow:hidden; background:var(--primary-forest); border:3px solid var(--sand-accent); display:inline-flex; align-items:center; justify-content:center; margin:0 auto; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);">
+          {% if user_profile.profile_image %}
+            <img src="{{ user_profile.profile_image.url }}" alt="{{ user.username }}" id="profileAvatarImg" style="width:100%; height:100%; object-fit:cover;">
+          {% else %}
+            <i class="bi bi-person-fill fs-1 text-light" id="profileAvatarFallback"></i>
+            <img src="" alt="" id="profileAvatarImg" style="width:100%; height:100%; object-fit:cover; display:none;">
+          {% endif %}
+        </div>
+        <button type="button" class="btn btn-sm btn-bb-sand rounded-circle position-absolute bottom-0 end-0 p-0 shadow-sm" style="width:34px; height:34px; display:flex; align-items:center; justify-content:center;" title="Upload / Change Photo" onclick="document.getElementById('avatarFileInput').click();">
+          <i class="bi bi-camera-fill fs-6"></i>
+        </button>
+      </div>
+
+      <div class="mt-2 fw-bold" style="color: var(--text-primary); font-size: 1.15rem;">
+        {{ user.get_full_name|default:user.username }}
+      </div>
+
+      <div class="small fw-semibold mt-1" style="color: var(--text-secondary);">
+        Role: <span style="color: var(--primary-forest);">{{ user_profile.get_role_display|default:"System User" }}</span>
+        {% if user_profile.badge_number %}
+          &bull; <span class="font-monospace">Badge: {{ user_profile.badge_number }}</span>
+        {% endif %}
+      </div>
+
+      <div class="mt-2 d-flex justify-content-center gap-2">
+        <button type="button" class="btn btn-outline-dark btn-sm fw-semibold" onclick="document.getElementById('avatarFileInput').click();">
+          <i class="bi bi-upload me-1"></i> Upload Photo
+        </button>
+        {% if user_profile.profile_image %}
+          <button type="button" class="btn btn-outline-danger btn-sm fw-semibold" onclick="confirmRemoveImage()">
+            <i class="bi bi-trash me-1"></i> Remove Photo
+          </button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Hidden Avatar File Input -->
+    <input type="file" id="avatarFileInput" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" onchange="handleFileSelect(event)">
+
+    <!-- Main Profile Edit Form -->
+    <form method="POST" action="{% url 'profile' %}?active_role={{ request.GET.active_role }}" id="profileForm" enctype="multipart/form-data">
       {% csrf_token %}
       <input type="hidden" name="active_role" value="{{ request.GET.active_role }}">
+      <!-- Hidden input carrying cropped base64 image data -->
+      <input type="hidden" name="cropped_image_data" id="croppedImageData" value="">
+
       <div class="row g-3 mb-3">
         <div class="col-md-6">
-          <label class="form-label text-secondary small fw-bold">First Name</label>
-          <input type="text" name="first_name" value="{{ user.first_name }}" class="form-control bg-dark text-light border-secondary">
+          <label class="form-label small fw-bold" style="color: var(--text-secondary);">First Name</label>
+          <input type="text" name="first_name" value="{{ user.first_name }}" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
         </div>
         <div class="col-md-6">
-          <label class="form-label text-secondary small fw-bold">Last Name</label>
-          <input type="text" name="last_name" value="{{ user.last_name }}" class="form-control bg-dark text-light border-secondary">
+          <label class="form-label small fw-bold" style="color: var(--text-secondary);">Last Name</label>
+          <input type="text" name="last_name" value="{{ user.last_name }}" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);">
         </div>
       </div>
 
       <div class="mb-3">
-        <label class="form-label text-secondary small fw-bold">Email Address</label>
-        <input type="email" name="email" value="{{ user.email }}" class="form-control bg-dark text-light border-secondary">
+        <label class="form-label small fw-bold" style="color: var(--text-secondary);">Registered Email Address</label>
+        <input type="email" name="email" value="{{ user.email }}" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" required>
+        <div class="form-text small" style="color: var(--text-muted);">Used for notifications, password recovery, and email login.</div>
       </div>
 
-      <div class="row g-3 mb-3">
+      <div class="row g-3 mb-4">
         <div class="col-md-6">
-          <label class="form-label text-secondary small fw-bold">Phone Number</label>
-          <input type="text" name="phone_number" value="{{ user_profile.phone_number|default:'' }}" class="form-control bg-dark text-light border-secondary" placeholder="+91 XXXXXXXXXX">
+          <label class="form-label small fw-bold" style="color: var(--text-secondary);">Phone Number</label>
+          <input type="text" name="phone_number" value="{{ user_profile.phone_number|default:'' }}" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="+91 XXXXXXXXXX">
         </div>
         <div class="col-md-6">
-          <label class="form-label text-secondary small fw-bold">Badge Number</label>
-          <input type="text" name="badge_number" value="{{ user_profile.badge_number|default:'' }}" class="form-control bg-dark text-light border-secondary" placeholder="e.g. RNG-NNJ-204">
+          <label class="form-label small fw-bold" style="color: var(--text-secondary);">Badge / Employee ID</label>
+          <input type="text" name="badge_number" value="{{ user_profile.badge_number|default:'' }}" class="form-control border-secondary" style="background-color: var(--bg-secondary); color: var(--text-primary);" placeholder="e.g. RNG-NNJ-204">
         </div>
       </div>
 
-      {% if user_profile.role == 'RANGER' %}
-      <div class="mb-3 p-3 bg-dark rounded border border-secondary">
-        <div class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" name="is_active_field_mode" id="fieldModeSwitch"
-            {% if user_profile.is_active_field_mode %}checked{% endif %}>
-          <label class="form-check-label text-light" for="fieldModeSwitch">
-            <i class="bi bi-phone-fill text-warning me-2"></i><b>Field Mode Active</b>
-          </label>
-        </div>
-        <div class="text-muted small mt-1">When enabled, your ranger location is shared with authorized Forest Officers for coordination.</div>
-      </div>
-      {% endif %}
-
-      <button type="submit" class="btn btn-bb-sand w-100 fw-bold py-2">Save Profile Changes</button>
+      <button type="submit" class="btn btn-bb-sand w-100 fw-bold py-2 shadow-sm">
+        <i class="bi bi-check2-circle me-1"></i> Save Profile Changes
+      </button>
     </form>
 
-    <div class="mt-4 pt-3 border-top border-secondary text-center">
-      <a href="{% url 'password_change' %}?active_role={{ request.GET.active_role }}" class="btn btn-outline-warning btn-sm px-4 me-2"><i class="bi bi-key"></i> Change Password</a>
-      <a href="{% url 'dashboard' %}?active_role={{ request.GET.active_role }}" class="btn btn-outline-secondary btn-sm px-4">Back to Dashboard</a>
-      <a href="{% url 'logout' %}?active_role={{ request.GET.active_role }}" class="btn btn-outline-danger btn-sm px-4 ms-2">Logout <i class="bi bi-box-arrow-right"></i></a>
+    <!-- Bottom Actions Navigation -->
+    <div class="mt-4 pt-3 border-top border-light-subtle text-center">
+      <a href="{% url 'password_change' %}?active_role={{ request.GET.active_role }}" class="btn btn-bb-forest btn-sm px-4 me-2 fw-bold">
+        <i class="bi bi-key-fill me-1"></i> Change Password
+      </a>
+      <a href="{% url 'dashboard' %}?active_role={{ request.GET.active_role }}" class="btn btn-outline-dark btn-sm px-4 fw-bold">
+        <i class="bi bi-speedometer2 me-1"></i> Back to Dashboard
+      </a>
+      <a href="{% url 'logout' %}?active_role={{ request.GET.active_role }}" class="btn btn-outline-danger btn-sm px-4 ms-2 fw-bold">
+        <i class="bi bi-box-arrow-right me-1"></i> Logout
+      </a>
     </div>
   </div>
 </div>
+
+<!-- Hidden Form for Image Removal -->
+<form method="POST" action="{% url 'profile' %}?active_role={{ request.GET.active_role }}" id="removeImageForm" style="display: none;">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="remove_image">
+  <input type="hidden" name="active_role" value="{{ request.GET.active_role }}">
+</form>
+
+<!-- WhatsApp-Style Square Image Crop Modal -->
+<div class="modal fade" id="cropModal" tabindex="-1" aria-labelledby="cropModalLabel" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+    <div class="modal-content" style="background-color: #ffffff; border: 1px solid var(--surface-border); border-radius: var(--radius-md);">
+      <div class="modal-header border-bottom py-2 px-3">
+        <h5 class="modal-title fs-6 fw-bold" id="cropModalLabel" style="color: var(--text-primary);">
+          <i class="bi bi-crop text-bb-forest me-2"></i> Adjust Profile Photo
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-3 text-center">
+        <!-- Crop Canvas Viewport (Square with circular cutout overlay) -->
+        <div class="position-relative mx-auto" style="width: 320px; height: 320px; overflow: hidden; background-color: #111815; border-radius: 8px; cursor: grab;" id="cropViewport">
+          <canvas id="cropCanvas" width="320" height="320" style="width: 320px; height: 320px; display: block;"></canvas>
+          
+          <!-- WhatsApp-style circular vignette overlay -->
+          <svg style="position: absolute; top: 0; left: 0; width: 320px; height: 320px; pointer-events: none;" viewBox="0 0 320 320">
+            <defs>
+              <mask id="cropMask">
+                <rect width="320" height="320" fill="white" />
+                <circle cx="160" cy="160" r="148" fill="black" />
+              </mask>
+            </defs>
+            <rect width="320" height="320" fill="rgba(0, 0, 0, 0.65)" mask="url(#cropMask)" />
+            <circle cx="160" cy="160" r="148" fill="none" stroke="#F9A608" stroke-width="2" stroke-dasharray="4 4" />
+          </svg>
+        </div>
+
+        <div class="small mt-2" style="color: var(--text-muted);">
+          <i class="bi bi-arrows-move me-1"></i> Drag to reposition &bull; Slider to zoom
+        </div>
+
+        <!-- Zoom & Rotate Controls -->
+        <div class="mt-3 px-3">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-zoom-out fs-5" style="color: var(--text-secondary);"></i>
+            <input type="range" class="form-range" id="zoomSlider" min="1" max="3" step="0.01" value="1" oninput="onZoomChange(this.value)">
+            <i class="bi bi-zoom-in fs-5" style="color: var(--text-secondary);"></i>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="rotateImage()" title="Rotate 90°">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetCrop()" title="Center Photo">
+              <i class="bi bi-aspect-ratio"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-top py-2 px-3 d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-semibold" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-bb-sand btn-sm px-4 fw-bold" onclick="applyCropAndSave()">
+          <i class="bi bi-check-lg me-1"></i> Set Profile Photo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let cropModalInstance = null;
+let sourceImage = null;
+let cropCanvas = null;
+let cropCtx = null;
+
+let imgX = 0;
+let imgY = 0;
+let imgScale = 1;
+let baseScale = 1;
+let imgRotation = 0; // in degrees: 0, 90, 180, 270
+
+let isDragging = false;
+let startX = 0;
+let startY = 0;
+
+document.addEventListener('DOMContentLoaded', function() {
+  cropCanvas = document.getElementById('cropCanvas');
+  if (cropCanvas) {
+    cropCtx = cropCanvas.getContext('2d');
+  }
+  const modalEl = document.getElementById('cropModal');
+  if (modalEl && typeof bootstrap !== 'undefined') {
+    cropModalInstance = new bootstrap.Modal(modalEl);
+  }
+
+  // Mouse drag listeners on crop viewport
+  const viewport = document.getElementById('cropViewport');
+  if (viewport) {
+    viewport.addEventListener('mousedown', function(e) {
+      isDragging = true;
+      startX = e.clientX - imgX;
+      startY = e.clientY - imgY;
+      viewport.style.cursor = 'grabbing';
+    });
+
+    window.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+      imgX = e.clientX - startX;
+      imgY = e.clientY - startY;
+      drawCrop();
+    });
+
+    window.addEventListener('mouseup', function() {
+      if (isDragging) {
+        isDragging = false;
+        if (viewport) viewport.style.cursor = 'grab';
+      }
+    });
+
+    // Touch events for mobile
+    viewport.addEventListener('touchstart', function(e) {
+      if (e.touches.length === 1) {
+        isDragging = true;
+        startX = e.touches[0].clientX - imgX;
+        startY = e.touches[0].clientY - imgY;
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', function(e) {
+      if (!isDragging || e.touches.length !== 1) return;
+      imgX = e.touches[0].clientX - startX;
+      imgY = e.touches[0].clientY - startY;
+      drawCrop();
+    }, { passive: true });
+
+    window.addEventListener('touchend', function() {
+      isDragging = false;
+    });
+
+    // Wheel zoom
+    viewport.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      const slider = document.getElementById('zoomSlider');
+      let val = parseFloat(slider.value);
+      if (e.deltaY < 0) {
+        val = Math.min(3, val + 0.1);
+      } else {
+        val = Math.max(1, val - 0.1);
+      }
+      slider.value = val;
+      onZoomChange(val);
+    }, { passive: false });
+  }
+});
+
+function handleFileSelect(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  if (!file.type.match(/^image\//)) {
+    alert('Please select a valid image file (PNG, JPG, JPEG, WebP).');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    sourceImage = new Image();
+    sourceImage.onload = function() {
+      initCropState();
+      if (cropModalInstance) {
+        cropModalInstance.show();
+      }
+    };
+    sourceImage.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function initCropState() {
+  const cw = cropCanvas.width;
+  const ch = cropCanvas.height;
+  imgRotation = 0;
+
+  // Fit image cover into crop frame (320x320)
+  const scaleW = cw / sourceImage.naturalWidth;
+  const scaleH = ch / sourceImage.naturalHeight;
+  baseScale = Math.max(scaleW, scaleH);
+  imgScale = baseScale;
+
+  document.getElementById('zoomSlider').value = 1;
+
+  // Center image
+  imgX = (cw - sourceImage.naturalWidth * imgScale) / 2;
+  imgY = (ch - sourceImage.naturalHeight * imgScale) / 2;
+
+  drawCrop();
+}
+
+function resetCrop() {
+  initCropState();
+}
+
+function rotateImage() {
+  imgRotation = (imgRotation + 90) % 360;
+  drawCrop();
+}
+
+function onZoomChange(zoomVal) {
+  const prevScale = imgScale;
+  imgScale = baseScale * parseFloat(zoomVal);
+
+  // Zoom centered on canvas middle
+  const cw = cropCanvas.width;
+  const ch = cropCanvas.height;
+  const cx = cw / 2;
+  const cy = ch / 2;
+
+  imgX = cx - (cx - imgX) * (imgScale / prevScale);
+  imgY = cy - (cy - imgY) * (imgScale / prevScale);
+
+  drawCrop();
+}
+
+function drawCrop() {
+  if (!sourceImage || !cropCtx) return;
+  const cw = cropCanvas.width;
+  const ch = cropCanvas.height;
+
+  cropCtx.clearRect(0, 0, cw, ch);
+  cropCtx.save();
+
+  // Apply transformations
+  cropCtx.translate(imgX + (sourceImage.naturalWidth * imgScale) / 2, imgY + (sourceImage.naturalHeight * imgScale) / 2);
+  cropCtx.rotate((imgRotation * Math.PI) / 180);
+  cropCtx.drawImage(
+    sourceImage,
+    (-sourceImage.naturalWidth * imgScale) / 2,
+    (-sourceImage.naturalHeight * imgScale) / 2,
+    sourceImage.naturalWidth * imgScale,
+    sourceImage.naturalHeight * imgScale
+  );
+
+  cropCtx.restore();
+}
+
+function applyCropAndSave() {
+  if (!sourceImage) return;
+
+  // Create an offscreen square 400x400 canvas for high-quality export
+  const exportSize = 400;
+  const offscreen = document.createElement('canvas');
+  offscreen.width = exportSize;
+  offscreen.height = exportSize;
+  const offCtx = offscreen.getContext('2d');
+
+  const ratio = exportSize / cropCanvas.width;
+
+  offCtx.save();
+  offCtx.translate((imgX + (sourceImage.naturalWidth * imgScale) / 2) * ratio, (imgY + (sourceImage.naturalHeight * imgScale) / 2) * ratio);
+  offCtx.rotate((imgRotation * Math.PI) / 180);
+  offCtx.drawImage(
+    sourceImage,
+    ((-sourceImage.naturalWidth * imgScale) / 2) * ratio,
+    ((-sourceImage.naturalHeight * imgScale) / 2) * ratio,
+    sourceImage.naturalWidth * imgScale * ratio,
+    sourceImage.naturalHeight * imgScale * ratio
+  );
+  offCtx.restore();
+
+  const croppedDataUrl = offscreen.toDataURL('image/jpeg', 0.92);
+
+  // Set to hidden form input
+  document.getElementById('croppedImageData').value = croppedDataUrl;
+
+  // Update preview on page immediately
+  const previewImg = document.getElementById('profileAvatarImg');
+  const fallback = document.getElementById('profileAvatarFallback');
+  if (previewImg) {
+    previewImg.src = croppedDataUrl;
+    previewImg.style.display = 'block';
+  }
+  if (fallback) {
+    fallback.style.display = 'none';
+  }
+
+  if (cropModalInstance) {
+    cropModalInstance.hide();
+  }
+
+  // Automatically submit the form to persist the new profile photo
+  document.getElementById('profileForm').submit();
+}
+
+function confirmRemoveImage() {
+  if (confirm('Are you sure you want to remove your profile photo?')) {
+    document.getElementById('removeImageForm').submit();
+  }
+}
+</script>
 {% endblock %}

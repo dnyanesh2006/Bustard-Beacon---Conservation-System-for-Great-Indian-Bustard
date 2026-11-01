@@ -78,12 +78,15 @@
           <form method="POST" action="{% url 'login' %}" id="staff-login-form">
             {% csrf_token %}
             <input type="hidden" name="login_role" id="login-role-input" value="{{ initial_role|default:'admin' }}">
+            {% if request.GET.next %}
+              <input type="hidden" name="next" value="{{ request.GET.next }}">
+            {% endif %}
             
             <div class="mb-3">
-              <label class="form-label text-secondary small fw-bold">Username</label>
+              <label class="form-label text-secondary small fw-bold">Username or Registered Email</label>
               <div class="input-group">
                 <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-person"></i></span>
-                <input type="text" name="username" id="input-username" class="form-control bg-dark text-light border-secondary" placeholder="Username" autocomplete="username" required>
+                <input type="text" name="username" id="input-username" class="form-control bg-dark text-light border-secondary" placeholder="Username or Email" autocomplete="username" value="{{ entered_username|default:'' }}" required>
               </div>
             </div>
 
@@ -103,7 +106,7 @@
                   Remember session
                 </label>
               </div>
-              <a href="{% url 'password_reset' %}" class="text-warning small text-decoration-none">Forgot Password?</a>
+              <a href="{% url 'password_reset' %}" class="small text-decoration-none fw-bold" style="color: var(--primary-forest);">Forgot Password?</a>
             </div>
 
             <button type="submit" class="btn btn-bb-sand w-100 py-2 fw-bold mb-3 shadow-sm">
